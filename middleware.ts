@@ -11,42 +11,45 @@ import { authApiPrefix, authRoutes, DEFAULT_LOGIN_REDIRECT, protectedRoutes } fr
 const { auth } = NextAuth({
   ...authConfig,
   callbacks: {
-    session: callbacks?.session //* this is a workaround for getting updated session in middleware
+    authorized({ auth, request: { nextUrl } }) {
+      const isApiAuthRoute = nextUrl.pathname.startsWith(authApiPrefix);
+      const isAuthRoute = authRoutes.includes(nextUrl.pathname);
+      const isProtectedRoute = protectedRoutes.some(route => nextUrl.pathname.startsWith(route));
+      const isRootPage = nextUrl.pathname === '/';
+      
+      // We don't need to authenticate for API auth routes
+      if (isApiAuthRoute) return true;
+      
+      const isLoggedIn = !!auth?.user;
+      
+      // For login page, redirect logged in users to dashboard
+      if (isAuthRoute) {
+        return isLoggedIn ? NextResponse.redirect(new URL(DEFAULT_LOGIN_REDIRECT, nextUrl)) : true;
+      }
+      
+      // For protected routes, redirect non-logged in users to login
+      if (isProtectedRoute && !isLoggedIn) {
+        const callbackUrl = `${nextUrl.pathname}${nextUrl.search}`;
+        const loginUrl = new URL(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`, nextUrl);
+        return NextResponse.redirect(loginUrl);
+      }
+      
+      // For root, redirect to appropriate page
+      if (isRootPage) {
+        return isLoggedIn 
+          ? NextResponse.redirect(new URL(DEFAULT_LOGIN_REDIRECT, nextUrl))
+          : NextResponse.redirect(new URL('/login', nextUrl));
+      }
+      
+      // All other routes can proceed
+      return true;
+    },
+    // Keep the session callback for middleware
+    session: callbacks?.session
   }
 })
 
-export default auth((req) => {
-  const { nextUrl } = req
-  const isAuthenticated = !!req.auth
-
-  const isApiAuthRoute = nextUrl.pathname.startsWith(authApiPrefix)
-  const isAuthRoute = authRoutes.includes(nextUrl.pathname)
-  const isProtectedRoute = protectedRoutes.some((route) => nextUrl.pathname.startsWith(route))
-
-  //* if the request is for an API route, pass it to the next handler
-  if (isApiAuthRoute) return NextResponse.next()
-
-  //* if the request is for an auth route, check if the user is authenticated, if authenticated redirect to the default login redirect, if not proceed to the next handler
-  if (isAuthRoute) {
-    if (isAuthenticated) return NextResponse.redirect(new URL(DEFAULT_LOGIN_REDIRECT, nextUrl))
-    return NextResponse.next()
-  }
-
-  //* if the request is not authenticated and is a protected route, redirect to the login page with the callback url
-  if (!isAuthenticated && isProtectedRoute) {
-    let callbackUrl = nextUrl.pathname
-
-    if (nextUrl.search) callbackUrl += nextUrl.search
-
-    const encodedCallbackUrl = encodeURIComponent(callbackUrl)
-
-    return NextResponse.redirect(new URL(`/login?callbackUrl=${encodedCallbackUrl}`, nextUrl))
-  }
-
-  //TODO: route authorization check based on roles - can be implemented in middleware or protected layout
-
-  return NextResponse.next()
-})
+export default auth
 
 export const config = {
   //* The following matcher runs middleware on all routes

@@ -37,7 +37,7 @@ export function Sidebar({ user }: { user: ExtendedUser }) {
           asChild
         >
           <Link href='/dashboard' className='flex items-center gap-2'>
-            <Icons.watch className='mr-1 h-6 w-6' />
+            <Icons.dashboard className='mr-1 h-6 w-6' />
             <h1
               className={cn(
                 'whitespace-nowrap text-lg font-bold transition-[transform,opacity,display] duration-300 ease-in-out',

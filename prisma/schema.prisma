@@ -5,6 +5,7 @@ datasource db {
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
 }
 
 //** role - admin, sales, supply-chain, finance, logistics, accounting
@@ -32,6 +33,7 @@ model User {
 
   accounts Account[]
   profile Profile?
+  settings UserSettings?
 }
 
 model Profile {
@@ -69,4 +71,72 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
  
   @@id([provider, providerAccountId])
+}
+
+model UserSettings {
+  id String @id @default(uuid())
+  userId String @unique
+  
+  // Dashboard settings
+  dashboardSettings Json?
+  
+  // System settings
+  systemSettings Json?
+  
+  // Role-specific settings
+  roleSettings Json?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Settings {
+  id        String   @id
+  data      String   @db.Text  // JSON string containing all settings
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
+}
+
+model RoleSettings {
+  id String @id @default(uuid())
+  role String @unique
+  settings Json
+}
+
+model Role {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String
+  permissions Json
+  isSystem    Boolean   @default(false)  // To mark built-in roles that can't be deleted
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy   String?
+  updatedBy   String?
+  deletedAt   DateTime?
+  deletedBy   String?
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  timestamp DateTime @default(now())
+  user      String   // User who performed the action
+  action    String   // Description of the action
+  eventType String   // user, system, security, data
+  severity  String   // info, warning, error, critical
+  details   String   // Additional details about the action
+  ipAddress String?  // IP address of the user
+  userAgent String?  // User agent of the browser
+  metadata  Json?    // Additional metadata as JSON
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([timestamp])
+  @@index([user])
+  @@index([eventType])
+  @@index([severity])
 }

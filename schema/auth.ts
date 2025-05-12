@@ -1,11 +1,28 @@
-import { z } from 'zod'
+import * as z from 'zod'
 
 //* Zod Schema
 export const loginFormSchema = z.object({
-  callbackUrl: z.string().nullish(),
-  email: z.string().min(1, { message: 'Please enter an email' }).email({ message: 'Please enter a valid email' }),
-  password: z.string().min(1, { message: 'Please enter a password' })
+  email: z.string().email({
+    message: 'Please enter a valid email address.',
+  }),
+  password: z.string().min(1, {
+    message: 'Password is required'
+  }),
+  totpCode: z.string().optional(),
+  callbackUrl: z.string().nullable().optional(),
+  isAdminBypass: z.boolean().optional()
 })
 
 //* Types
 export type LoginForm = z.infer<typeof loginFormSchema>
+
+export interface LoginResponse {
+  success?: boolean;
+  error?: string;
+  message?: string;
+  user?: {
+    role?: string;
+  };
+  code?: number;
+  action?: string;
+}

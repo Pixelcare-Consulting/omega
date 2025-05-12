@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter } from 'nextjs-toploader/app';
 import { Button, ButtonProps } from './ui/button'
 
 type BackButtonProps = Pick<ButtonProps, 'className' | 'variant' | 'children'> & { href?: string }

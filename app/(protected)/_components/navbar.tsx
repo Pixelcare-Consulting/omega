@@ -2,6 +2,8 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { SheetMenu } from './sheet-menu'
 import { UserNav } from './user-nav'
 import { ExtendedUser } from '@/auth'
+import { Bell } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 interface NavbarProps {
   title: string
@@ -16,7 +18,10 @@ export function Navbar({ title, user }: NavbarProps) {
           <SheetMenu user={user} />
           <h1 className='font-bold'>{title}</h1>
         </div>
-        <div className='flex flex-1 items-center justify-end'>
+        <div className='flex flex-1 items-center justify-end space-x-3'>
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+            <Bell size={18} className="text-muted-foreground" />
+          </Button>
           <ThemeToggle />
           <UserNav user={user} />
         </div>

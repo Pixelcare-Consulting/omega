@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { LogOut, User } from 'lucide-react'
+import { HelpCircle, LogOut, User } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -25,12 +26,32 @@ type UserNavProps = {
 }
 
 export function UserNav({ user }: UserNavProps) {
+  const router = useRouter()
+  
   if (!user || !user.name) return null
 
-  const logout = () => {
-    signOut()
-    window.location.assign('/login')
+  const handleLogout = async () => {
+    try {
+      await signOut({
+        redirect: false,
+        callbackUrl: '/login'
+      })
+      
+      // Clear any existing cookies
+      document.cookie.split(';').forEach(cookie => {
+        const [name] = cookie.split('=')
+        document.cookie = `${name.trim()}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;`
+      })
+      
+      router.push('/login')
+      router.refresh()
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
   }
+
+  // Get avatar URL directly from user 
+  const avatarUrl = user.avatarUrl || ''
 
   return (
     <DropdownMenu>
@@ -40,7 +61,7 @@ export function UserNav({ user }: UserNavProps) {
             <DropdownMenuTrigger asChild>
               <Button variant='outline' className='relative h-8 w-8 rounded-full'>
                 <Avatar className='h-8 w-8'>
-                  <AvatarImage className='object-cover object-center' src={user?.profile?.image ?? ''} alt='Avatar' />
+                  <AvatarImage className='object-cover object-center' src={avatarUrl} alt='Avatar' />
                   <AvatarFallback className='bg-transparent'>{getInitials(user.name ?? '').toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <span className='absolute -bottom-0.5 start-5 size-3 rounded-full border-2 border-white bg-green-500 dark:border-gray-800' />
@@ -56,7 +77,7 @@ export function UserNav({ user }: UserNavProps) {
           <div className='flex flex-col items-center gap-y-2'>
             <Button variant='outline' className='relative size-12 rounded-full'>
               <Avatar className='size-12'>
-                <AvatarImage className='object-cover object-center' src={user?.profile?.image ?? ''} alt='Avatar' />
+                <AvatarImage className='object-cover object-center' src={avatarUrl} alt='Avatar' />
                 <AvatarFallback className='bg-transparent'>{getInitials(user.name ?? '').toUpperCase()}</AvatarFallback>
               </Avatar>
               <span className='absolute -bottom-0.5 start-7 size-4 rounded-full border-2 border-white bg-green-500 dark:border-gray-800' />
@@ -70,14 +91,20 @@ export function UserNav({ user }: UserNavProps) {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem className='hover:cursor-pointer' asChild>
-            <Link href='/dashboard' className='flex items-center'>
+            <Link href='/dashboard/profile' className='flex items-center'>
               <User className='mr-3 h-4 w-4 text-muted-foreground' />
-              Account
+              My Profile
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem className='hover:cursor-pointer' asChild>
+            <Link href='/dashboard/help' className='flex items-center'>
+              <HelpCircle className='mr-3 h-4 w-4 text-muted-foreground' />
+              Help & Support
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className='hover:cursor-pointer' onClick={() => logout()}>
+        <DropdownMenuItem className='hover:cursor-pointer' onClick={handleLogout}>
           <LogOut className='mr-3 h-4 w-4 text-muted-foreground' />
           Sign out
         </DropdownMenuItem>

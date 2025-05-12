@@ -12,6 +12,7 @@ type Menu = {
   active?: boolean
   icon: Icon
   submenus?: Submenu[]
+  target?: string
 }
 
 type MenuGroup = {
@@ -42,39 +43,21 @@ export function getMenuList(role: string | null | undefined): MenuGroup[] {
               submenus: []
             },
             {
-              href: '/dashboard/users',
-              label: 'Users',
-              icon: Icons.users,
-              submenus: []
-            },
-            {
-              href: '/dashboard/settings',
-              label: 'Settings',
-              icon: Icons.settings,
-              submenus: []
-            },
-            {
-              href: '/dashboard/permissions',
-              label: 'Permissions',
-              icon: Icons.lock,
-              submenus: []
-            },
-            {
-              href: '/dashboard/Analytics',
-              label: 'Analytics',
-              icon: Icons.report,
-              submenus: []
-            },
-            {
-              href: '/dashboard/calendar',
+              href: '/dashboard/admin/calendar',
               label: 'Calendar',
               icon: Icons.calendar,
               submenus: []
             },
             {
-              href: '/dashboard/activity-log',
+              href: '/dashboard/admin/activity-log',
               label: 'Activity Logs',
               icon: Icons.history,
+              submenus: []
+            },
+            {
+              href: '/dashboard/admin/settings',
+              label: 'Settings',
+              icon: Icons.settings,
               submenus: []
             }
           ]
@@ -83,37 +66,143 @@ export function getMenuList(role: string | null | undefined): MenuGroup[] {
           groupLabel: 'Systems',
           menus: [
             {
-              href: '/dashboard/accounting',
+              href: '/dashboard/admin/accounting',
               label: 'Accounting',
               icon: Icons.wallet,
               submenus: []
             },
             {
-              href: '/dashboard/quality-control',
+              href: '/dashboard/admin/quality-control',
               label: 'Quality Control',
               icon: Icons.checkCircle,
               submenus: []
             },
             {
-              href: '/dashboard/crm',
-              label: 'CRM',
+              href: '/dashboard/admin/crm',
+              label: 'CSRM',
               icon: Icons.handeShake,
-              submenus: []
+              submenus: [
+                {
+                  href: '/dashboard/admin/crm/lead-lists',
+                  label: 'Lead Lists',
+                },
+                {
+                  href: '/dashboard/admin/crm/leads',
+                  label: 'Leads',
+                },
+                {
+                  href: '/dashboard/admin/crm/call-logs',
+                  label: 'Call Logs Details (API)',
+                },
+                {
+                  href: '/dashboard/admin/crm/meetings',
+                  label: 'Meeting Tracker',
+                },
+                {
+                  href: '/dashboard/admin/crm/employees',
+                  label: 'Employees',
+                },
+              ]
             },
             {
-              href: '/dashboard/global-procurement-system',
+              href: '/dashboard/admin/global-procurement',
               label: 'Global Procurement',
-              icon: Icons.cirleDollar,
-              submenus: []
+              icon: Icons.dollar,
+              submenus: [
+                {
+                  href: '/dashboard/admin/global-procurement/requisitions',
+                  label: 'Requisitions',
+                },
+                {
+                  href: '/dashboard/admin/global-procurement/supplier-quotes',
+                  label: 'Supplier Quotes',
+                },
+                {
+                  href: '/dashboard/admin/global-procurement/customers',
+                  label: 'Customers',
+                },
+                {
+                  href: '/dashboard/admin/global-procurement/supplier',
+                  label: 'Supplier',
+                },
+                {
+                  href: '/dashboard/admin/global-procurement/contacts',
+                  label: 'Contacts',
+                },
+                {
+                  href: '/dashboard/admin/global-procurement/employees',
+                  label: 'Employees (New)',
+                },
+                {
+                  href: '/dashboard/admin/global-procurement/so-report',
+                  label: 'SO Report',
+                },
+                {
+                  href: '/dashboard/admin/global-procurement/commission',
+                  label: 'Commission',
+                },
+                {
+                  href: '/dashboard/admin/global-procurement/commission-adjustments',
+                  label: 'Commission Adjustments',
+                },
+                {
+                  href: '/dashboard/admin/global-procurement/employee-commission-adjustments',
+                  label: 'Employee Commission Adjustments',
+                },
+                {
+                  href: '/dashboard/admin/global-procurement/product-brands',
+                  label: 'Product Brands',
+                },
+                {
+                  href: '/dashboard/admin/global-procurement/product-availability',
+                  label: 'Product Availability',
+                },
+                {
+                  href: '/dashboard/admin/global-procurement/product-commodities',
+                  label: 'Product Commodities',
+                },
+                {
+                  href: '/dashboard/admin/global-procurement/incoming-tracking',
+                  label: 'Incoming Tracking',
+                },
+                {
+                  href: '/dashboard/admin/global-procurement/boms',
+                  label: 'BOMS',
+                },
+                {
+                  href: '/dashboard/admin/global-procurement/boms-items',
+                  label: 'BOMS Items',
+                },
+                {
+                  href: '/dashboard/admin/global-procurement/boms-items-quotes',
+                  label: 'BOMS Items Quotes',
+                },
+                {
+                  href: '/dashboard/admin/global-procurement/customer-excess',
+                  label: 'Customer Excess',
+                },
+                {
+                  href: '/dashboard/admin/global-procurement/supplier-offers',
+                  label: 'Supplier Offers',
+                },
+                {
+                  href: '/dashboard/admin/global-procurement/documents',
+                  label: 'Documents',
+                },
+                {
+                  href: '/dashboard/admin/global-procurement/requisitions-kpi',
+                  label: 'Requisitions KPI Table',
+                },
+              ]
             },
             {
-              href: '/dashboard/warehouse-services',
+              href: '/dashboard/admin/warehouse-services',
               label: 'Warehouse Services',
               icon: Icons.truck,
               submenus: []
             },
             {
-              href: '/dashboard/document-library',
+              href: '/dashboard/admin/document-library',
               label: 'Document Library',
               icon: Icons.fileText,
               submenus: []
@@ -129,21 +218,22 @@ export function getMenuList(role: string | null | undefined): MenuGroup[] {
           groupLabel: 'CRM',
           menus: [
             {
-              href: '/dashboard',
+              href: '/crm',
               label: 'Dashboard',
               icon: Icons.dashboard,
               submenus: []
             },
             {
-              href: '/dashboard/users',
+              href: '/crm/users',
               label: 'Users',
               icon: Icons.users,
               submenus: []
             },
             {
-              href: '/dashboard/settings',
+              href: '/crm/settings',
               label: 'Settings',
-              icon: Icons.settings
+              icon: Icons.settings,
+              submenus: []
             }
           ]
         },
@@ -151,37 +241,37 @@ export function getMenuList(role: string | null | undefined): MenuGroup[] {
           groupLabel: 'Menu',
           menus: [
             {
-              href: '/dashboard/lead-list',
+              href: '/crm/lead-list',
               label: 'Lead List',
               icon: Icons.table,
               submenus: []
             },
             {
-              href: '/dashboard/leads',
+              href: '/crm/leads',
               label: 'Leads',
               icon: Icons.table,
               submenus: []
             },
             {
-              href: '/dashboard/call-logs-details',
+              href: '/crm/call-logs-details',
               label: 'Call Logs Details (API)',
               icon: Icons.folder,
               submenus: []
             },
             {
-              href: '/dashboard/meeting-tracker',
+              href: '/crm/meeting-tracker',
               label: 'Meeting Tracker',
               icon: Icons.handeShake,
               submenus: []
             },
             {
-              href: '/dashboard/employees',
+              href: '/crm/employees',
               label: 'Employees',
               icon: Icons.folder,
               submenus: []
             },
             {
-              href: '/dashboard/email-communication',
+              href: '/crm/email-communication',
               label: 'Email Communication',
               icon: Icons.inbox,
               submenus: []
@@ -311,7 +401,7 @@ export function getMenuList(role: string | null | undefined): MenuGroup[] {
             {
               href: '/dashboard/boms-items',
               label: 'BOMS Items',
-              icon: Icons.receiptText,
+              icon: Icons.receipt,
               submenus: []
             },
             {
@@ -743,7 +833,7 @@ export function getMenuList(role: string | null | undefined): MenuGroup[] {
   //* filter menu group by role
   const menusGroups = roleBasedMenuGroups.find((item) => item.role === role)
 
-  console.log(menusGroups)
+  // console.log(menusGroups)
 
   return menusGroups?.menuGroups || roleBasedMenuGroups[0].menuGroups
 }

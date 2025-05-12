@@ -3,7 +3,7 @@
  * These routes does not require authentication.
  * @type {string[]}
  */
-export const publicRoutes = ['/']
+export const publicRoutes = []
 
 /**
  * An array of routes that are used for authentication.
@@ -17,7 +17,7 @@ export const authRoutes = ['/login']
  * These routes requires authentication.
  * @type {string[]}
  */
-export const protectedRoutes = ['/dashboard']
+export const protectedRoutes = ['/dashboard', '/crm', '/accounting']
 
 /**
  * The prefix for all API routes that is used for authentication.
