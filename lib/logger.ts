@@ -1,39 +1,91 @@
-'use server'
 
-import fs from 'fs';
-import path from 'path';
+// Edge Runtime compatible logger
+// This logger works in both Edge Runtime and Node.js environments
 
-// This file is intended to run only on the server (Node.js environment).
-// Ensure that any components or API routes importing this file are also marked as server-only
-// or are configured to run in a Node.js environment to avoid issues with the edge runtime.
+// Check if we're in Edge Runtime
+const isEdgeRuntime = typeof process === 'undefined' ||
+  typeof process.cwd !== 'function' ||
+  (typeof globalThis !== 'undefined' && 'EdgeRuntime' in globalThis);
 
-const LOGS_DIR = path.join(process.cwd(), 'logs');
+// Console-only logger for Edge Runtime
+const createConsoleLogger = (prefix: string) => ({
+  info: (message: string) => {
+    const timestamp = new Date().toISOString();
+    console.log(`${timestamp} [${prefix.toUpperCase()}] [INFO] - ${message}`);
+  },
+  error: (message: string) => {
+    const timestamp = new Date().toISOString();
+    console.error(`${timestamp} [${prefix.toUpperCase()}] [ERROR] - ${message}`);
+  },
+});
 
-// Ensure the logs directory exists
-if (!fs.existsSync(LOGS_DIR)) {
-  fs.mkdirSync(LOGS_DIR, { recursive: true });
-}
+// File logger for Node.js environment
+const createFileLogger = (fileName: string) => {
+  return {
+    info: async (message: string) => {
+      try {
+        // Only import and use Node.js APIs when actually logging
+        const fs = await import('fs');
+        const path = await import('path');
+        const LOGS_DIR = path.join(process.cwd(), 'logs');
 
-const logToFile = (fileName: string, level: string, message: string) => {
-  const timestamp = new Date().toISOString();
-  const logMessage = `${timestamp} [${level.toUpperCase()}] - ${message}\n`;
-  const logFilePath = path.join(LOGS_DIR, fileName);
+        // Ensure the logs directory exists
+        if (!fs.existsSync(LOGS_DIR)) {
+          fs.mkdirSync(LOGS_DIR, { recursive: true });
+        }
 
-  fs.appendFile(logFilePath, logMessage, (err) => {
-    if (err) {
-      console.error(`Failed to write to log file ${fileName}:`, err);
-    }
-  });
+        const timestamp = new Date().toISOString();
+        const logMessage = `${timestamp} [INFO] - ${message}\n`;
+        const logFilePath = path.join(LOGS_DIR, fileName);
+
+        fs.appendFile(logFilePath, logMessage, (err: any) => {
+          if (err) {
+            console.error(`Failed to write to log file ${fileName}:`, err);
+          }
+        });
+      } catch (error) {
+        // Fallback to console if file logging fails
+        const timestamp = new Date().toISOString();
+        console.log(`${timestamp} [${fileName.toUpperCase()}] [INFO] - ${message}`);
+      }
+    },
+    error: async (message: string) => {
+      try {
+        // Only import and use Node.js APIs when actually logging
+        const fs = await import('fs');
+        const path = await import('path');
+        const LOGS_DIR = path.join(process.cwd(), 'logs');
+
+        // Ensure the logs directory exists
+        if (!fs.existsSync(LOGS_DIR)) {
+          fs.mkdirSync(LOGS_DIR, { recursive: true });
+        }
+
+        const timestamp = new Date().toISOString();
+        const logMessage = `${timestamp} [ERROR] - ${message}\n`;
+        const logFilePath = path.join(LOGS_DIR, fileName);
+
+        fs.appendFile(logFilePath, logMessage, (err: any) => {
+          if (err) {
+            console.error(`Failed to write to log file ${fileName}:`, err);
+          }
+        });
+      } catch (error) {
+        // Fallback to console if file logging fails
+        const timestamp = new Date().toISOString();
+        console.error(`${timestamp} [${fileName.toUpperCase()}] [ERROR] - ${message}`);
+      }
+    },
+  };
 };
 
-export const sapLogger = {
-  info: (message: string) => logToFile('sap.log', 'info', message),
-  error: (message: string) => logToFile('sap.log', 'error', message),
-};
+// Export loggers that work in both environments
+export const sapLogger = isEdgeRuntime
+  ? createConsoleLogger('sap')
+  : createFileLogger('sap.log');
 
-export const authLogger = {
-  info: (message: string) => logToFile('auth.log', 'info', message),
-  error: (message: string) => logToFile('auth.log', 'error', message),
-};
+export const authLogger = isEdgeRuntime
+  ? createConsoleLogger('auth')
+  : createFileLogger('auth.log');
 
 // Add other loggers as needed for different parts of the application

@@ -1,0 +1,4 @@
+2025-05-28T08:59:40.476Z [ERROR] - SAP Service Layer authentication failed: connect ETIMEDOUT 172.16.5.2:50000
+2025-05-28T08:59:40.513Z [INFO] - SAP Service Layer token file not found. Generating new cookies.
+2025-05-28T09:00:01.522Z [ERROR] - SAP Service Layer authentication failed: connect ETIMEDOUT 172.16.5.2:50000
+2025-05-28T09:00:01.522Z [ERROR] - Failed to generate new SAP Service Layer cookies: Error: SAP Service Layer authentication failed: connect ETIMEDOUT 172.16.5.2:50000
