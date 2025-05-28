@@ -1,4 +1,5 @@
 import axios from 'axios';
+import https from 'https';
 
 interface SAPCredentials {
   BaseURL: string;
@@ -14,10 +15,16 @@ interface SAPSession {
 
 export async function authenticateSAPServiceLayer(credentials: SAPCredentials): Promise<SAPSession> {
   try {
+    const agent = new https.Agent({
+      rejectUnauthorized: false,
+    });
+
     const response = await axios.post(`${credentials.BaseURL}/b1s/v1/Login`, {
       CompanyDB: credentials.CompanyDB,
       UserName: credentials.UserName,
       Password: credentials.Password,
+    }, {
+      httpsAgent: agent,
     });
 
     const { SessionId, SessionTimeout } = response.data;
