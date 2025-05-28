@@ -1,10 +1,12 @@
 import "next-auth/jwt"
 
 import NextAuth, { NextAuthConfig } from "next-auth"
+import { authenticateSAPServiceLayer } from "./lib/sap-service-layer"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import authConfig from "./auth.config"
 import { prisma } from "./lib/db"
 import { isProd } from "./constant/common"
+import Credentials from "next-auth/providers/credentials"
 
 //* use secure cookies only for production and prefix with __Secure-
 const isSecureCookies = isProd ? true : false
@@ -37,6 +39,7 @@ declare module "next-auth/jwt" {
     roleId: string
     avatarUrl?: string | null
     rolePermissions: { id: string; code: string; actions: string[] }[]
+    sapSession?: { SessionId: string; SessionTimeout: number }; // Add SAP session to JWT type
   }
 }
 
@@ -54,6 +57,22 @@ export const callbacks: NextAuthConfig["callbacks"] = {
         token.role = adapterUser.role
         token.roleId = adapterUser.roleId
         token.rolePermissions = adapterUser.rolePermissions
+
+        //* Authenticate with SAP Service Layer and add session to token
+        try {
+          const sapCredentials = {
+            BaseURL: process.env.SAP_BASE_URL || '',
+            CompanyDB: process.env.SAP_COMPANY_DB || '',
+            UserName: process.env.SAP_USERNAME || '',
+            Password: process.env.SAP_PASSWORD || '',
+          };
+          const sapSession = await authenticateSAPServiceLayer(sapCredentials);
+          token.sapSession = sapSession;
+        } catch (sapError) {
+          console.error("SAP Service Layer authentication failed:", sapError);
+          // Decide how to handle SAP authentication failure - maybe prevent login or show an error
+        }
+
 
         //* Query only the avatar URL separately - avoid including profile in token
         const userProfile = await prisma.profile.findUnique({

@@ -24,6 +24,7 @@ const LOADING_TIPS = [
   'Verifying your credentials...',
   'Checking account status...',
   'Preparing your workspace...',
+  'Connecting to external services...',
   'Almost there...'
 ] as const
 
@@ -116,7 +117,7 @@ const AuthStatusModal = ({ isOpen, status, message, onClose, redirectUrl }: Auth
 
               {/* Loading tip */}
               <div className='space-y-2 text-center'>
-                <p className='animate-fade-in text-sm text-muted-foreground'>{LOADING_TIPS[currentTip]}</p>
+                <p className='animate-fade-in animate-pulse text-sm text-primary'>{LOADING_TIPS[currentTip]}</p>
               </div>
 
               {/* Progress indication */}
@@ -226,13 +227,14 @@ const SigninForm = () => {
 
   const handleSubmit = async (formValues: LoginForm) => {
     setError('')
+    setError('')
     setSuccess('')
 
     //* Show loading modal
     setModalState({
       isOpen: true,
       status: 'loading',
-      message: 'Verifying your credentials...'
+      message: 'Signing in...' // Initial message
     })
 
     try {
@@ -271,7 +273,7 @@ const SigninForm = () => {
         //* Handle 2FA required for non-admin users
         if (result.message === '2FA Code required!' || result.message === '2FA_REQUIRED') {
           setShowTotpInput(true)
-          setModalState({ isOpen: false, status: 'loading', message: '' })
+          setModalState({ isOpen: false, status: 'loading', message: '' }) // Close modal for 2FA input
           setError('Please enter your two-factor authentication code.')
           return
         }
@@ -279,7 +281,7 @@ const SigninForm = () => {
         //* Handle invalid 2FA code
         if (result.message === 'Invalid authentication code. Please try again.' || result.message === 'INVALID_2FA_CODE') {
           setError('Invalid authentication code. Please try again.')
-          setModalState({ isOpen: false, status: 'loading', message: '' })
+          setModalState({ isOpen: false, status: 'loading', message: '' }) // Close modal for invalid 2FA
           return
         }
 

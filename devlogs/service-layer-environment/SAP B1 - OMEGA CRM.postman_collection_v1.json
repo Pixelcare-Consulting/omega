@@ -1,0 +1,474 @@
+{
+	"info": {
+		"_postman_id": "a55cc58b-6fd4-4337-a028-56afd7cb5a78",
+		"name": "SAP B1 - OMEGA CRM",
+		"description": "C:\\\\Program Files\\\\SAP\\\\SAP Business One ServerTools\\\\ServiceLayer\\\\Conf\n\nMethod: Private Authentication",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "28568383"
+	},
+	"item": [
+		{
+			"name": "OMEGA CRM",
+			"item": [
+				{
+					"name": "Authentication",
+					"item": [
+						{
+							"name": "Login",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"CompanyDB\": \"{{CompanyDB}}\",\r\n    \"UserName\": \"{{UserName}}\",\r\n    \"Password\": \"{{Password}}\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{BaseURL}}/b1s/v1/Login",
+									"host": [
+										"{{BaseURL}}"
+									],
+									"path": [
+										"b1s",
+										"v1",
+										"Login"
+									]
+								},
+								"description": "SAP B1 Service Layer Login"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "BP Master Data",
+					"item": [
+						{
+							"name": "Query API",
+							"item": [
+								{
+									"name": "BP Add Query",
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "//CardType List\r\n//C - Customer, S - Supplier/Vendor and L - Lead\r\n{\r\n \"SqlCode\": \"query1\",\r\n \"SqlName\": \"query1\",\r\n \"SqlText\": \r\n            \"\r\n                    SELECT          T0.\\\"CardCode\\\",\r\n                                    T0.\\\"CardName\\\",\r\n                                    T0.\\\"CardType\\\",\r\n                                    T0.\\\"GroupCode\\\",\r\n                                    T1.\\\"GroupName\\\",\r\n                                    T0.\\\"Address\\\",\r\n                                    T0.\\\"ZipCode\\\",\r\n                                    T0.\\\"MailAddres\\\",\r\n                                    T0.\\\"MailZipCod\\\",\r\n                                    T0.\\\"Phone1\\\",\r\n                                    T0.\\\"CntctPrsn\\\",\r\n                                    T0.\\\"GroupNum\\\",\r\n                                    T2.\\\"PymntGroup\\\",\r\n                                    T0.\\\"Currency\\\",\r\n                                    T0.\\\"U_VendorCode\\\",\r\n                                    T0.\\\"U_OMEG_QBRelated\\\"\r\n\r\n                    FROM            OCRD T0\r\n                    INNER JOIN\t\tOCRG T1 ON T0.\\\"GroupCode\\\" = T1.\\\"GroupCode\\\"\r\n                    INNER JOIN\t\tOCTG T2 ON T0.\\\"GroupNum\\\" = T2.\\\"GroupNum\\\"\r\n            \"\r\n}\r\n\r\n// \"SELECT T0.\\\"CardCode\\\", T0.\\\"CardName\\\", T0.\\\"CardType\\\", T0.\\\"GroupCode\\\", T1.\\\"GroupName\\\", T0.\\\"Address\\\", T0.\\\"ZipCode\\\", T0.////\\\"MailAddres\\\", T0.\\\"MailZipCod\\\", T0.\\\"Phone1\\\", T0.\\\"CntctPrsn\\\", T0.\\\"GroupNum\\\", T2.\\\"PymntGroup\\\", T0.\\\"Currency\\\", T0.\\\"U_VendorCode\\\",T0.\\\"U_OMEG_QBRelated\\\" FROM OCRD T0 INNER JOIN OCRG T1 ON T0.\\\"GroupCode\\\" = T1.\\\"GroupCode\\\" INNER JOIN OCTG T2 ON T0.\\\"GroupNum\\\" = T2.\\\"GroupNum\\\"",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{BaseURL}}/b1s/v1/SQLQueries ",
+											"host": [
+												"{{BaseURL}}"
+											],
+											"path": [
+												"b1s",
+												"v1",
+												"SQLQueries "
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "BP Get Query",
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{BaseURL}}/b1s/v1/SQLQueries('query1')/List",
+											"host": [
+												"{{BaseURL}}"
+											],
+											"path": [
+												"b1s",
+												"v1",
+												"SQLQueries('query1')",
+												"List"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Delete BP Query",
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"url": {
+											"raw": "{{BaseURL}}/b1s/v1/SQLQueries('query1')",
+											"host": [
+												"{{BaseURL}}"
+											],
+											"path": [
+												"b1s",
+												"v1",
+												"SQLQueries('query1')"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Standard API",
+							"item": [
+								{
+									"name": "Create BP Master Data",
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n    \"CardCode\": \"\",\r\n    \"CardName\": \"\",\r\n    \"CardType\": \"\",\r\n    \"GroupCode\": \"\",\r\n    \"Address\": \"\",\r\n    \"ZipCode\": \"\",\r\n    \"MailAddres\": \"\",\r\n    \"MailZipCod\": \"\",\r\n    \"Phone1\": \"\",\r\n    \"CntctPrsn\": \"\",\r\n    \"GroupNum\": \"\",\r\n    \"Currency\": \"\",\r\n    \"U_VendorCode\": \"\",\r\n    \"U_OMEG_QBRelated\": \"\"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{BaseURL}}/b1s/v1/BusinessPartners",
+											"host": [
+												"{{BaseURL}}"
+											],
+											"path": [
+												"b1s",
+												"v1",
+												"BusinessPartners"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Update BP Master Data",
+									"request": {
+										"method": "PATCH",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "//BP0001 is the BP to be updated\r\n\r\n{\r\n    \"CardCode\": \"\",\r\n    \"CardName\": \"\",\r\n    \"CardType\": \"\",\r\n    \"GroupCode\": \"\",\r\n    \"Address\": \"\",\r\n    \"ZipCode\": \"\",\r\n    \"MailAddres\": \"\",\r\n    \"MailZipCod\": \"\",\r\n    \"Phone1\": \"\",\r\n    \"CntctPrsn\": \"\",\r\n    \"GroupNum\": \"\",\r\n    \"Currency\": \"\",\r\n    \"U_VendorCode\": \"\",\r\n    \"U_OMEG_QBRelated\": \"\"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{BaseURL}}/b1s/v1/BusinessPartners('BP0001')",
+											"host": [
+												"{{BaseURL}}"
+											],
+											"path": [
+												"b1s",
+												"v1",
+												"BusinessPartners('BP0001')"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "BP Group",
+					"item": [
+						{
+							"name": "Standard API",
+							"item": [
+								{
+									"name": "BP Group Get Query",
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{BaseURL}}/b1s/v1/BusinessPartnerGroups",
+											"host": [
+												"{{BaseURL}}"
+											],
+											"path": [
+												"b1s",
+												"v1",
+												"BusinessPartnerGroups"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "Item Group",
+					"item": [
+						{
+							"name": "Standard API",
+							"item": [
+								{
+									"name": "Item Group Get Query",
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{BaseURL}}/b1s/v1/ItemGroups",
+											"host": [
+												"{{BaseURL}}"
+											],
+											"path": [
+												"b1s",
+												"v1",
+												"ItemGroups"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "Manufacturer",
+					"item": [
+						{
+							"name": "Standard API",
+							"item": [
+								{
+									"name": "Manufacturer Get Query",
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{BaseURL}}/b1s/v1/Manufacturers",
+											"host": [
+												"{{BaseURL}}"
+											],
+											"path": [
+												"b1s",
+												"v1",
+												"Manufacturers"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "Item Master Data",
+					"item": [
+						{
+							"name": "Query API",
+							"item": [
+								{
+									"name": "Item Add Query",
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n \"SqlCode\": \"query2\",\r\n \"SqlName\": \"query2\",\r\n \"SqlText\": \r\n            \"\r\n                SELECT          T0.\\\"ItemCode\\\",\r\n                                T0.\\\"ItemName\\\",\r\n                                T0.\\\"ItmsGrpCod\\\",\r\n                                T1.\\\"ItmsGrpNam\\\",\r\n                                T0.\\\"FirmCode\\\",\r\n                                T2.\\\"FirmName\\\",\r\n                                T0.\\\"ManBtchNum\\\",\r\n                                T0.\\\"BuyUnitMsr\\\"\r\n\r\n                FROM            OITM T0\r\n                INNER JOIN\t\tOITB T1 ON T0.\\\"ItmsGrpCod\\\" = T1.\\\"ItmsGrpCod\\\"\r\n                INNER JOIN\t\tOMRC T2 ON T0.\\\"FirmCode\\\" = T2.\\\"FirmCode\\\"\r\n            \"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{BaseURL}}/b1s/v1/SQLQueries ",
+											"host": [
+												"{{BaseURL}}"
+											],
+											"path": [
+												"b1s",
+												"v1",
+												"SQLQueries "
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Item Get Query",
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{BaseURL}}/b1s/v1/SQLQueries('query2')/List",
+											"host": [
+												"{{BaseURL}}"
+											],
+											"path": [
+												"b1s",
+												"v1",
+												"SQLQueries('query2')",
+												"List"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Delete Item Query",
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"url": {
+											"raw": "{{BaseURL}}/b1s/v1/SQLQueries('query2')",
+											"host": [
+												"{{BaseURL}}"
+											],
+											"path": [
+												"b1s",
+												"v1",
+												"SQLQueries('query2')"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Standard API",
+							"item": [
+								{
+									"name": "Create Item Master Data",
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n    \"ItemCode\": \"\",\r\n    \"ItemName\": \"\",\r\n    \"ItmsGrpCod\": \"\",\r\n    \"FirmCode\": \"\",\r\n    \"ManBtchNum\": \"\",\r\n    \"BuyUnitMsr\": \"\"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{BaseURL}}/b1s/v1/Items",
+											"host": [
+												"{{BaseURL}}"
+											],
+											"path": [
+												"b1s",
+												"v1",
+												"Items"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Update Item Master Data",
+									"request": {
+										"method": "PATCH",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "//ITEM0001 is the Item to be updated\r\n\r\n{\r\n    \"ItemCode\": \"\",\r\n    \"ItemName\": \"\",\r\n    \"ItmsGrpCod\": \"\",\r\n    \"FirmCode\": \"\",\r\n    \"ManBtchNum\": \"\",\r\n    \"BuyUnitMsr\": \"\"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{BaseURL}}/b1s/v1/Items('ITEM0001')",
+											"host": [
+												"{{BaseURL}}"
+											],
+											"path": [
+												"b1s",
+												"v1",
+												"Items('ITEM0001')"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						}
+					]
+				}
+			],
+			"description": "C:\\\\Program Files\\\\SAP\\\\SAP Business One ServerTools\\\\ServiceLayer\\\\Conf\n\nMethod: Private Authentication"
+		}
+	]
+}
