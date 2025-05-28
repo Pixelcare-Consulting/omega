@@ -1,6 +1,7 @@
 import axios from 'axios';
 import https from 'https';
 import { getSapServiceLayerToken } from './sap-auth';
+import { sapLogger } from './logger'; // Import the logger
 
 interface SAPCredentials {
   BaseURL: string;
@@ -10,8 +11,8 @@ interface SAPCredentials {
 }
 
 interface SAPSession {
-  SessionId: string;
-  SessionTimeout: number;
+  b1session: string;
+  routeid: string;
 }
 
 export async function authenticateSAPServiceLayer(credentials: SAPCredentials): Promise<SAPSession> {
@@ -28,14 +29,26 @@ export async function authenticateSAPServiceLayer(credentials: SAPCredentials): 
       httpsAgent: agent,
     });
 
-    const { SessionId, SessionTimeout } = response.data;
+    const setCookieHeader = response.headers['set-cookie'];
+    let b1sessionCookie = '';
+    let routeidCookie = '';
+
+    if (setCookieHeader) {
+      setCookieHeader.forEach((cookie: string) => {
+        if (cookie.startsWith('B1SESSION=')) {
+          b1sessionCookie = cookie.split(';')[0];
+        } else if (cookie.startsWith('ROUTEID=')) {
+          routeidCookie = cookie.split(';')[0];
+        }
+      });
+    }
 
     return {
-      SessionId,
-      SessionTimeout,
+      b1session: b1sessionCookie,
+      routeid: routeidCookie,
     };
   } catch (error: any) {
-    console.error('SAP Service Layer authentication failed:', error.message);
+    sapLogger.error(`SAP Service Layer authentication failed: ${error.message}`);
     throw new Error(`SAP Service Layer authentication failed: ${error.message}`);
   }
 }
@@ -53,19 +66,16 @@ export async function callSapServiceLayerApi(url: string): Promise<any> {
       rejectUnauthorized: false,
     });
 
-    // Get the SAP Service Layer authorization token
-    const authToken = await getSapServiceLayerToken();
+    // Get the SAP Service Layer authorization cookies
+    const authCookies = await getSapServiceLayerToken(); // This function will be updated to return cookies
 
-    if (!authToken) {
-      throw new Error('SAP Service Layer authorization token not available.');
+    if (!authCookies || !authCookies.b1session || !authCookies.routeid) {
+      throw new Error('SAP Service Layer authorization cookies not available.');
     }
 
     const response = await axios.get(url, {
       headers: {
-        'Cookie': `
-        B1SESSION=${authToken};
-        B1SESSION_TIMEOUT=${authToken};
-        ROUTEID=${authToken};`,
+        'Cookie': `${authCookies.b1session}; ${authCookies.routeid}`,
         'Content-Type': 'application/json',
       },
       httpsAgent: agent,
@@ -73,7 +83,7 @@ export async function callSapServiceLayerApi(url: string): Promise<any> {
 
     return response.data;
   } catch (error: any) {
-    console.error('Error calling SAP Service Layer API:', error.message);
+    sapLogger.error(`Error calling SAP Service Layer API: ${error.message}`);
     throw new Error(`Error calling SAP Service Layer API: ${error.message}`);
   }
 }

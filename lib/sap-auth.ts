@@ -2,6 +2,8 @@
 
 import fs from 'fs';
 import ini from 'ini';
+import { authenticateSAPServiceLayer } from './sap-service-layer'; // Import the authentication function
+import { sapLogger, authLogger } from './logger'; // Import the loggers
 
 // Define the path for the token file
 // This code is intended to run only on the server (Node.js environment).
@@ -10,23 +12,28 @@ import ini from 'ini';
 const TOKEN_FILE_PATH = './SAP-Service-Layer-Authorization-Token.ini';
 
 interface SapTokenConfig {
-  AuthorizationToken?: string;
-  ExpiresIn?: number;
-  GeneratedAt?: number;
+  b1session?: string;
+  routeid?: string;
+  GeneratedAt?: number; // Timestamp when the cookies were generated
+}
+
+interface SapAuthCookies {
+  b1session: string;
+  routeid: string;
 }
 
 /**
- * Generates or retrieves a valid SAP Service Layer Authorization Token.
- * Checks if an existing token file exists and if the token is still valid.
- * If not valid or not present, generates a new token and saves it to the file.
+ * Generates or retrieves valid SAP Service Layer Authorization Cookies.
+ * Checks if an existing token file exists and if the cookies are still valid.
+ * If not valid or not present, generates new cookies and saves them to the file.
  *
  * NOTE: In a production environment, ensure this file is stored in a secure location
  * with appropriate file permissions to prevent unauthorized access.
  * Consider encrypting the token within the file for added security.
  *
- * @returns {Promise<string>} The valid SAP Service Layer Authorization Token.
+ * @returns {Promise<SapAuthCookies>} The valid SAP Service Layer Authorization Cookies.
  */
-export async function getSapServiceLayerToken(): Promise<string> {
+export async function getSapServiceLayerToken(): Promise<SapAuthCookies> {
   let config: SapTokenConfig = {};
 
   // Check if the token file exists
@@ -35,85 +42,83 @@ export async function getSapServiceLayerToken(): Promise<string> {
       const fileContent = fs.readFileSync(TOKEN_FILE_PATH, 'utf-8');
       config = ini.parse(fileContent);
 
-      // Check if the existing token is still valid (e.g., within its expiry time)
+      // Check if the existing cookies are still valid (e.g., within a reasonable time frame)
+      // SAP Service Layer session timeout is typically 30 minutes (1800 seconds)
       const generatedAt = config.GeneratedAt || 0;
-      const expiresIn = config.ExpiresIn || 0;
+      const sessionTimeout = 1800 * 1000; // 30 minutes in milliseconds
       const currentTime = Date.now(); // Current time in milliseconds
 
-      // Add a buffer (e.g., 60 seconds) to the expiry check to avoid using a token that's about to expire
+      // Add a buffer (e.g., 60 seconds) to the expiry check
       const expiryBuffer = 60 * 1000; // 60 seconds
-      const isTokenValid = config.AuthorizationToken && (currentTime - generatedAt) < (expiresIn * 1000 - expiryBuffer);
+      const isTokenValid = config.b1session && config.routeid && (currentTime - generatedAt) < (sessionTimeout - expiryBuffer);
 
       if (isTokenValid) {
-        console.log('Using existing valid SAP Service Layer token.');
-        return config.AuthorizationToken!;
+        sapLogger.info('Using existing valid SAP Service Layer cookies.');
+        return {
+          b1session: config.b1session!,
+          routeid: config.routeid!,
+        };
       } else {
-        console.log('SAP Service Layer token expired or invalid. Generating a new one.');
+        sapLogger.info('SAP Service Layer cookies expired or invalid. Generating new ones.');
       }
     } catch (error) {
-      console.error('Error reading or parsing SAP Service Layer token file:', error);
-      console.log('Generating a new SAP Service Layer token.');
+      sapLogger.error(`Error reading or parsing SAP Service Layer token file: ${error}`);
+      sapLogger.info('Generating new SAP Service Layer cookies.');
     }
   } else {
-    console.log('SAP Service Layer token file not found. Generating a new token.');
+    sapLogger.info('SAP Service Layer token file not found. Generating new cookies.');
   }
 
-  // If no valid token exists, generate a new one
-  const newToken = await generateNewSapServiceLayerToken(); // Implement this function
-  const expiresIn = 3600; // Example expiry time in seconds (adjust based on SAP Service Layer response)
+  // If no valid cookies exist, generate new ones
+  const newCookies = await generateNewSapServiceLayerToken();
 
-  // Update config with new token details
-  config.AuthorizationToken = newToken;
-  config.ExpiresIn = expiresIn;
+  // Update config with new cookie details
+  config.b1session = newCookies.b1session;
+  config.routeid = newCookies.routeid;
   config.GeneratedAt = Date.now();
 
-  // Save the new token to the file
+  // Save the new cookies to the file
   try {
     const newFileContent = ini.stringify(config);
     fs.writeFileSync(TOKEN_FILE_PATH, newFileContent);
-    console.log('New SAP Service Layer token saved to file.');
+    console.log('New SAP Service Layer cookies saved to file.');
   } catch (error) {
-    console.error('Error writing SAP Service Layer token file:', error);
+    sapLogger.error(`Error writing SAP Service Layer token file: ${error}`);
     // Depending on the error, you might want to throw or handle differently
   }
 
-  return newToken;
+  return newCookies;
 }
 
 /**
- * Placeholder function to generate a new SAP Service Layer token.
- * This needs to be implemented to make an actual API call to SAP Service Layer
- * to obtain a new token using appropriate credentials.
+ * Generates new SAP Service Layer cookies by authenticating with the service layer.
  *
- * @returns {Promise<string>} The newly generated authorization token.
+ * @returns {Promise<SapAuthCookies>} The newly generated authorization cookies.
  */
-async function generateNewSapServiceLayerToken(): Promise<string> {
-  // TODO: Implement the actual API call to SAP Service Layer to get a new token.
-  // This will likely involve sending a POST request with credentials (username, password)
-  // to the SAP Service Layer login endpoint.
-  // Example:
-  // const response = await fetch('YOUR_SAP_SERVICE_LAYER_LOGIN_URL', {
-  //   method: 'POST',
-  //   headers: {
-  //     'Content-Type': 'application/json',
-  //   },
-  //   body: JSON.stringify({
-  //     UserName: 'YOUR_USERNAME',
-  //     Password: 'YOUR_PASSWORD',
-  //     CompanyDB: 'YOUR_COMPANY_DB',
-  //   }),
-  // });
-  // const data = await response.json();
-  // return data.SessionId; // Or whatever the token field is in the response
+async function generateNewSapServiceLayerToken(): Promise<SapAuthCookies> {
+  // TODO: Replace with actual credentials from a secure source (e.g., environment variables, secrets management)
+  const credentials = {
+    BaseURL: 'YOUR_SAP_SERVICE_LAYER_BASE_URL', // e.g., 'https://your-sap-server:50000'
+    CompanyDB: 'YOUR_COMPANY_DB',
+    UserName: 'YOUR_USERNAME',
+    Password: 'YOUR_PASSWORD',
+  };
 
-  console.warn('generateNewSapServiceLayerToken is a placeholder. Implement the actual API call.');
-  // Return a dummy token for now
-  return 'dummy_sap_authorization_token_' + Date.now();
+  try {
+    const session = await authenticateSAPServiceLayer(credentials);
+    return {
+      b1session: session.b1session,
+      routeid: session.routeid,
+    };
+  } catch (error) {
+    sapLogger.error(`Failed to generate new SAP Service Layer cookies: ${error}`);
+    throw new Error('Failed to generate new SAP Service Layer cookies.');
+  }
 }
 
 // Example usage (for testing purposes)
 // async function testToken() {
 //   const token = await getSapServiceLayerToken();
-//   console.log('Retrieved token:', token);
+//   sapLogger.info(`Retrieved token: ${token}`);
 // }
 // testToken();

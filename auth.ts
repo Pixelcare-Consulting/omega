@@ -3,6 +3,7 @@ import "next-auth/jwt"
 import NextAuth, { NextAuthConfig } from "next-auth"
 import { authenticateSAPServiceLayer } from "./lib/sap-service-layer"
 import { PrismaAdapter } from "@auth/prisma-adapter"
+import { authLogger } from "./lib/logger"; // Import the auth logger
 import authConfig from "./auth.config"
 import { prisma } from "./lib/db"
 import { isProd } from "./constant/common"
@@ -39,7 +40,7 @@ declare module "next-auth/jwt" {
     roleId: string
     avatarUrl?: string | null
     rolePermissions: { id: string; code: string; actions: string[] }[]
-    sapSession?: { SessionId: string; SessionTimeout: number }; // Add SAP session to JWT type
+    sapSession?: { b1session: string; routeid: string }; // Add SAP session to JWT type
   }
 }
 
@@ -68,8 +69,8 @@ export const callbacks: NextAuthConfig["callbacks"] = {
           };
           const sapSession = await authenticateSAPServiceLayer(sapCredentials);
           token.sapSession = sapSession;
-        } catch (sapError) {
-          console.error("SAP Service Layer authentication failed:", sapError);
+        } catch (sapError: any) {
+          authLogger.error(`SAP Service Layer authentication failed: ${sapError.message}`);
           // Decide how to handle SAP authentication failure - maybe prevent login or show an error
         }
 
@@ -97,8 +98,8 @@ export const callbacks: NextAuthConfig["callbacks"] = {
       }
 
       return token
-    } catch (error) {
-      console.error("Error in JWT callback:", error)
+    } catch (error: any) {
+      authLogger.error(`Error in JWT callback: ${error.message}`);
       return token
     }
   },
@@ -119,8 +120,8 @@ export const callbacks: NextAuthConfig["callbacks"] = {
       }
 
       return session
-    } catch (error) {
-      console.error("Error in session callback:", error)
+    } catch (error: any) {
+      authLogger.error(`Error in session callback: ${error.message}`);
       return session
     }
   },
@@ -152,11 +153,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   debug: false, //* Disable debug to reduce token size from logs
   logger: {
     error(error: Error) {
-      console.error(`Auth error:`, error)
+      authLogger.error(`Auth error: ${error.message}`);
     },
     warn(code: string) {
       if (code !== "debug-enabled") {
-        console.warn(`Auth warning (${code})`)
+        authLogger.info(`Auth warning (${code})`);
       }
     },
   },
