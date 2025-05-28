@@ -66,7 +66,7 @@ export default function SettingsConfig() {
     type: 'success' | 'error' | null;
     message: string;
   }>({ type: null, message: '' });
-  
+
   const [systemSettings, setSystemSettings] = useState<SystemSettings>({
     activityLogs: true,
     debugMode: false,
@@ -121,17 +121,17 @@ export default function SettingsConfig() {
         if (!response.ok) {
           throw new Error('Failed to fetch settings');
         }
-        
+
         const data = await response.json();
-        
+
         if (data.systemSettings) {
           setSystemSettings(data.systemSettings);
         }
-        
+
         if (data.dashboardSettings) {
           setDashboardSettings(data.dashboardSettings);
         }
-        
+
         console.log('Settings loaded successfully');
       } catch (error) {
         console.error('Failed to load settings:', error);
@@ -139,7 +139,31 @@ export default function SettingsConfig() {
       }
     };
 
+    const loadSapSettings = async () => {
+      try {
+        const baseUrl = getBaseUrl();
+        const response = await fetch(`${baseUrl}/api/integrations/sap-b1/settings`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch SAP settings');
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.settings) {
+          setApiConfig(prev => ({
+            ...prev,
+            sapB1: data.settings
+          }));
+        }
+
+        console.log('SAP settings loaded successfully');
+      } catch (error) {
+        console.error('Failed to load SAP settings:', error);
+      }
+    };
+
     loadSettings();
+    loadSapSettings();
   }, []);
 
   // Fetch SAP status when the API config dialog is opened
@@ -205,7 +229,7 @@ export default function SettingsConfig() {
 
   const handleSystemChange = async (key: keyof SystemSettings, value: any) => {
     setSystemSettings(prev => ({ ...prev, [key]: value }));
-    
+
     if (key === 'defaultTheme') {
       setTheme(value);
     }
@@ -223,7 +247,7 @@ export default function SettingsConfig() {
           dashboardSettings
         })
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to save settings');
       }
@@ -232,9 +256,9 @@ export default function SettingsConfig() {
       if (systemSettings.systemName) {
         await updateMetadata(systemSettings.systemName);
       }
-      
+
       toast.success('Settings saved successfully');
-      
+
     } catch (error) {
       console.error('Failed to save settings:', error);
       toast.error('Could not save settings. Please try again.');
@@ -264,7 +288,7 @@ export default function SettingsConfig() {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         toast.success('Successfully connected to SAP B1 Service Layer');
       } else {
@@ -288,7 +312,7 @@ export default function SettingsConfig() {
             <AlertCircle className="h-5 w-5" />
           )}
           <p>{notification.message}</p>
-          <button 
+          <button
             className="ml-auto text-sm"
             onClick={() => setNotification({ type: null, message: '' })}
           >
@@ -296,7 +320,7 @@ export default function SettingsConfig() {
           </button>
         </div>
       )}
-      
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold">Admin Settings</h1>
@@ -313,7 +337,7 @@ export default function SettingsConfig() {
           )}
         </Button>
       </div>
-      
+
       <Tabs defaultValue="system" className="space-y-4">
         <TabsList>
           <TabsTrigger value="system">System</TabsTrigger>
@@ -321,7 +345,7 @@ export default function SettingsConfig() {
           <TabsTrigger value="users">Users & Permissions</TabsTrigger>
           <TabsTrigger value="advanced">Advanced</TabsTrigger>
         </TabsList>
-        
+
         {/* System Tab */}
         <TabsContent value="system">
           <Card>
@@ -334,22 +358,22 @@ export default function SettingsConfig() {
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">General Configuration</h3>
                 <Separator />
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div>
                       <Label htmlFor="systemName">System Name</Label>
-                      <Input 
-                        id="systemName" 
-                        value={systemSettings.systemName} 
+                      <Input
+                        id="systemName"
+                        value={systemSettings.systemName}
                         onChange={(e) => handleSystemChange('systemName', e.target.value)}
                         className="mt-1"
                       />
                     </div>
-                    
+
                     <div>
                       <Label htmlFor="defaultLocale">Default Locale</Label>
-                      <Select 
+                      <Select
                         value={systemSettings.defaultLocale}
                         onValueChange={(value) => handleSystemChange('defaultLocale', value)}
                       >
@@ -365,7 +389,7 @@ export default function SettingsConfig() {
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     <div>
                       <Label htmlFor="defaultTheme">Default Theme</Label>
                       <Select
@@ -383,7 +407,7 @@ export default function SettingsConfig() {
                       </Select>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-4">
                     <div className="flex items-center justify-between border p-4 rounded-lg">
                       <div>
@@ -398,7 +422,7 @@ export default function SettingsConfig() {
                         onCheckedChange={(checked) => handleSystemChange('activityLogs', checked)}
                       />
                     </div>
-                    
+
                     <div className="flex items-center justify-between border p-4 rounded-lg">
                       <div>
                         <Label htmlFor="debugMode">Debug Mode</Label>
@@ -415,12 +439,12 @@ export default function SettingsConfig() {
                   </div>
                 </div>
               </div>
-              
+
               {/* System Administration */}
               <div>
                 <h3 className="text-lg font-medium">Developer Tools</h3>
                 <Separator className="mb-4" />
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* <Link href="/dashboard/admin/database">
                     <Card className="border p-4 hover:bg-muted/50 transition-colors cursor-pointer">
@@ -435,7 +459,7 @@ export default function SettingsConfig() {
                       </div>
                     </Card>
                   </Link> */}
-                  
+
                   <Dialog open={isApiConfigDialogOpen} onOpenChange={setIsApiConfigDialogOpen}>
                     <DialogTrigger asChild>
                       <Card className="border p-4 hover:bg-muted/50 transition-colors cursor-pointer">
@@ -454,7 +478,7 @@ export default function SettingsConfig() {
                       <DialogHeader>
                         <DialogTitle>SAP Service Layer</DialogTitle>
                         <DialogDescription>
-                          Information about SAP Service Layer endpoints and services. 
+                          Information about SAP Service Layer endpoints and services.
                         </DialogDescription>
                         <Separator />
                       </DialogHeader>
@@ -538,6 +562,18 @@ export default function SettingsConfig() {
                             </p>
                           </div>
                         </div>
+                        <Separator />
+                        <div className="flex justify-center">
+                          <Button
+                            variant="outline"
+                            onClick={testSAPConnection}
+                            disabled={!showCredentials}
+                            className="gap-2"
+                          >
+                            <Database className="h-4 w-4" />
+                            Test Connection
+                          </Button>
+                        </div>
                       </div>
                     </DialogContent>
                   </Dialog>
@@ -558,7 +594,7 @@ export default function SettingsConfig() {
             </CardFooter>
           </Card>
         </TabsContent>
-        
+
         {/* Dashboard Management Tab */}
         <TabsContent value="dashboard">
           <Card>
@@ -578,7 +614,7 @@ export default function SettingsConfig() {
             </CardFooter>
           </Card>
         </TabsContent>
-        
+
         {/* Users & Permissions Tab */}
         <TabsContent value="users">
           <Card className="border-none mt-2 mb-2">
@@ -603,7 +639,7 @@ export default function SettingsConfig() {
                   </div>
                 </Card>
               </Link>
-              
+
               <Link href="/dashboard/admin/roles">
                 <Card className="border p-4 hover:bg-muted/50 transition-colors cursor-pointer">
                   <div className="flex items-center justify-between">
@@ -623,7 +659,7 @@ export default function SettingsConfig() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         {/* Advanced Tab */}
         <TabsContent value="advanced">
           <Card>
@@ -639,7 +675,7 @@ export default function SettingsConfig() {
           </Card>
         </TabsContent>
       </Tabs>
-      
+
       {/* Password Verification Dialog */}
       <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
@@ -673,7 +709,7 @@ export default function SettingsConfig() {
               setPasswordError(''); // Clear previous errors
 
               // Basic frontend check (INSECURE):
-              const insecureHardcodedPassword = 'admin123'; 
+              const insecureHardcodedPassword = 'admin123';
               if (credentialPassword === insecureHardcodedPassword) {
                 setShowCredentials(true);
                 setIsPasswordDialogOpen(false);
