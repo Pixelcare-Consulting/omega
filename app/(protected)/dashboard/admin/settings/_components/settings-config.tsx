@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Settings, Layout, PlusCircle, Users, Shield, Database, Sliders, Save, AlertCircle, CheckCircle, Globe } from 'lucide-react';
+import { ChevronRight, Settings, Layout, PlusCircle, Users, Shield, Database, Sliders, Save, AlertCircle, CheckCircle, Globe, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { updateMetadata } from '@/app/lib/metadata';
 import { useTheme } from 'next-themes';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 // Types
 interface SystemSettings {
@@ -99,6 +100,18 @@ export default function SettingsConfig() {
     }
   });
 
+  const [sapStatus, setSapStatus] = useState<{
+    status: 'unknown' | 'connected' | 'disconnected';
+    expirationTime: number | null; // Change to number for timestamp
+  }>({ status: 'unknown', expirationTime: null });
+
+  const [isApiConfigDialogOpen, setIsApiConfigDialogOpen] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [showCredentials, setShowCredentials] = useState(false); // State for showing credentials
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false); // State for password dialog
+  const [credentialPassword, setCredentialPassword] = useState(''); // State for password input in dialog
+  const [passwordError, setPasswordError] = useState(''); // State for password error message
+
   // Load settings from the database
   useEffect(() => {
     const loadSettings = async () => {
@@ -128,6 +141,53 @@ export default function SettingsConfig() {
 
     loadSettings();
   }, []);
+
+  // Fetch SAP status when the API config dialog is opened
+  useEffect(() => {
+    if (isApiConfigDialogOpen) {
+      const fetchSapStatus = async () => {
+        try {
+          const baseUrl = getBaseUrl();
+          const response = await fetch(`${baseUrl}/api/integrations/sap-b1/status`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch SAP status');
+          }
+          const data = await response.json();
+          setSapStatus(data);
+        } catch (error) {
+          console.error('Failed to fetch SAP status:', error);
+          setSapStatus({ status: 'disconnected', expirationTime: null });
+        }
+      };
+      fetchSapStatus();
+    }
+  }, [isApiConfigDialogOpen]);
+
+  // Countdown timer for token expiration
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+
+    if (sapStatus.status === 'connected' && sapStatus.expirationTime) {
+      const calculateTimeRemaining = () => {
+        const now = Date.now();
+        const expiration = sapStatus.expirationTime!;
+        const remaining = Math.max(0, expiration - now);
+        setTimeRemaining(remaining);
+      };
+
+      calculateTimeRemaining(); // Calculate initial time
+      timer = setInterval(calculateTimeRemaining, 1000); // Update every second
+    } else {
+      setTimeRemaining(null);
+    }
+
+    return () => {
+      if (timer) {
+        clearInterval(timer);
+      }
+    };
+  }, [sapStatus.status, sapStatus.expirationTime]);
+
 
   // Update theme when defaultTheme changes
   useEffect(() => {
@@ -356,13 +416,13 @@ export default function SettingsConfig() {
                 </div>
               </div>
               
-              {/* System Administration  DO NOT UNCOMMENT THIS SECTION HIDING THIS TEMPORARILY
+              {/* System Administration */}
               <div>
-                <h3 className="text-lg font-medium">System Administration</h3>
+                <h3 className="text-lg font-medium">Developer Tools</h3>
                 <Separator className="mb-4" />
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Link href="/dashboard/admin/database">
+                  {/* <Link href="/dashboard/admin/database">
                     <Card className="border p-4 hover:bg-muted/50 transition-colors cursor-pointer">
                       <div className="flex items-center gap-4">
                         <div className="p-2 rounded-full bg-primary/10">
@@ -374,9 +434,9 @@ export default function SettingsConfig() {
                         </div>
                       </div>
                     </Card>
-                  </Link>
+                  </Link> */}
                   
-                  <Dialog>
+                  <Dialog open={isApiConfigDialogOpen} onOpenChange={setIsApiConfigDialogOpen}>
                     <DialogTrigger asChild>
                       <Card className="border p-4 hover:bg-muted/50 transition-colors cursor-pointer">
                         <div className="flex items-center gap-4">
@@ -384,24 +444,117 @@ export default function SettingsConfig() {
                             <Globe className="h-5 w-5 text-primary" />
                           </div>
                           <div>
-                            <h3 className="font-medium">API Configuration</h3>
-                            <p className="text-sm text-muted-foreground">Manage API endpoints and external service connections</p>
+                            <h3 className="font-medium">SAP Service Layer</h3>
+                            <p className="text-sm text-muted-foreground">Manage SAP Service Layer endpoints and external service connections</p>
                           </div>
                         </div>
                       </Card>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[600px]">
+                      <DialogHeader>
+                        <DialogTitle>SAP Service Layer</DialogTitle>
+                        <DialogDescription>
+                          Information about SAP Service Layer endpoints and services. 
+                        </DialogDescription>
+                        <Separator />
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <DialogTitle>SAP Business One Service Layer</DialogTitle>
+                        <DialogDescription>
+                         This is used for integration with SAP Business One Syncing Omega Portal.
+                        </DialogDescription>
+                        <Separator />
+                        <Alert className="bg-yellow-100 border-yellow-400 text-yellow-800">
+                          <AlertCircle className="h-5 w-5 text-yellow-500" />
+                          <AlertTitle>Warning</AlertTitle>
+                          <AlertDescription>
+                            Please contact the developer if you require any changes to these configurations.
+                          </AlertDescription>
+                        </Alert>
+                        <Separator />
+                        <div className="space-y-4">
+                          {!showCredentials ? (
+                            <div className="flex justify-center">
+                              <Button variant="outline" onClick={() => setIsPasswordDialogOpen(true)}>Show Credentials</Button>
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              <div>
+                                <Label htmlFor="serviceLayerUrl">Service Layer URL:</Label>
+                                <Input
+                                  id="serviceLayerUrl"
+                                  value={apiConfig.sapB1.serviceLayerUrl}
+                                  readOnly={!showCredentials}
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="companyDB">Company DB:</Label>
+                                <Input
+                                  id="companyDB"
+                                  value={apiConfig.sapB1.companyDB}
+                                  readOnly={!showCredentials}
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="username">Username:</Label>
+                                <Input
+                                  id="username"
+                                  value={apiConfig.sapB1.username}
+                                  readOnly={!showCredentials}
+                                  className="mt-1"
+                                />
+                              </div>
+                              {/* <div>
+                                <Label htmlFor="password">Password:</Label>
+                                <Input
+                                  id="password"
+                                  type="password" // Mask the password
+                                  value={apiConfig.sapB1.password}
+                                  readOnly={!showCredentials}
+                                  className="mt-1"
+                                />
+                              </div> */}
+                            </div>
+                          )}
+                        </div>
+                        <Separator />
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <Label>Status:</Label>
+                            <div className="flex items-center gap-2">
+                              {sapStatus.status === 'connected' && <CheckCircle className="h-5 w-5 text-green-500" />}
+                              {sapStatus.status === 'disconnected' && <XCircle className="h-5 w-5 text-red-500" />}
+                              <p className={`text-sm ${sapStatus.status === 'connected' ? 'text-green-500' : sapStatus.status === 'disconnected' ? 'text-red-500' : 'text-muted-foreground'}`}>
+                                {sapStatus.status === 'unknown' ? 'Loading...' : sapStatus.status === 'connected' ? 'Connected' : 'Disconnected'}
+                              </p>
+                            </div>
+                          </div>
+                          <div>
+                            <Label>Token Expiration:</Label>
+                            <p className="text-sm text-muted-foreground">
+                              {timeRemaining !== null ? `${Math.floor(timeRemaining / 60000)}m ${Math.floor((timeRemaining % 60000) / 1000)}s` : sapStatus.status === 'disconnected' ? 'N/A' : 'Loading...'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </DialogContent>
                   </Dialog>
                 </div>
               </div>
-              */}
+              {notification.type && (
+                <Alert className={`mt-4 ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
+                  <AlertTitle>{notification.type === 'success' ? 'Success' : 'Error'}</AlertTitle>
+                  <AlertDescription>{notification.message}</AlertDescription>
+                </Alert>
+              )}
             </CardContent>
             <CardFooter className="flex justify-between">
               <Button variant="outline">Reset to Defaults</Button>
-              {/* <Button onClick={saveSettings} disabled={loading}>
+              <Button onClick={saveSettings} disabled={loading}>
                 {loading ? 'Saving...' : 'Save Changes'}
-              </Button> */}
+              </Button>
             </CardFooter>
           </Card>
         </TabsContent>
@@ -486,6 +639,54 @@ export default function SettingsConfig() {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Password Verification Dialog */}
+      <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Enter User Password</DialogTitle>
+            <DialogDescription>
+              Enter your user password to view sensitive credentials.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="credentialPassword" className="text-right">
+                Password
+              </Label>
+              <Input
+                id="credentialPassword"
+                type="password"
+                value={credentialPassword}
+                onChange={(e) => setCredentialPassword(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            {passwordError && <p className="text-red-500 text-sm text-center">{passwordError}</p>}
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => {
+              // WARNING: This is an INSECURE frontend password check for demonstration purposes ONLY.
+              // Storing sensitive passwords or their verification logic on the frontend is a major security vulnerability.
+              // In a production application, password verification MUST be done securely on the backend.
+
+              setPasswordError(''); // Clear previous errors
+
+              // Basic frontend check (INSECURE):
+              const insecureHardcodedPassword = 'admin123'; 
+              if (credentialPassword === insecureHardcodedPassword) {
+                setShowCredentials(true);
+                setIsPasswordDialogOpen(false);
+                setCredentialPassword(''); // Clear password input
+              } else {
+                setPasswordError('Unauthorized User!');
+              }
+            }}>
+              Verify
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-} 
+}
