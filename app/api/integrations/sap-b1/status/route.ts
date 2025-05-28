@@ -63,15 +63,55 @@ export async function GET(request: Request) {
         tokenInfo = ini.parse(fileContent);
 
         if (tokenInfo.GeneratedAt && tokenInfo.b1session && tokenInfo.routeid) {
-          // Calculate expiration (SAP tokens typically last 30 minutes)
-          const sessionTimeout = 30 * 60 * 1000; // 30 minutes in milliseconds
-          calculatedExpiration = tokenInfo.GeneratedAt + sessionTimeout;
-          const currentTime = Date.now();
+          // Convert GeneratedAt to number if it's a string (from INI parsing)
+          const generatedAtTimestamp = typeof tokenInfo.GeneratedAt === 'string'
+            ? parseInt(tokenInfo.GeneratedAt, 10)
+            : tokenInfo.GeneratedAt;
 
-          if (currentTime < calculatedExpiration) {
-            tokenStatus = 'valid';
+          // Validate that we have a valid timestamp
+          const currentTime = Date.now();
+          const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+          const maxFuture = 5 * 60 * 1000; // Allow 5 minutes in the future for clock skew
+
+          // Debug token validation (remove in production)
+          // console.log('Token validation:', {
+          //   generatedAtTimestamp,
+          //   currentTime,
+          //   generatedDate: new Date(generatedAtTimestamp).toISOString(),
+          //   currentDate: new Date(currentTime).toISOString(),
+          //   ageDiff: currentTime - generatedAtTimestamp,
+          //   maxAge
+          // });
+
+          if (!isNaN(generatedAtTimestamp) &&
+              generatedAtTimestamp > 0 &&
+              generatedAtTimestamp <= (currentTime + maxFuture) &&
+              (currentTime - generatedAtTimestamp) < maxAge) {
+
+            // Calculate expiration (SAP tokens typically last 30 minutes)
+            const sessionTimeout = 30 * 60 * 1000; // 30 minutes in milliseconds
+            calculatedExpiration = generatedAtTimestamp + sessionTimeout;
+
+            if (currentTime < calculatedExpiration) {
+              tokenStatus = 'valid';
+            } else {
+              tokenStatus = 'expired';
+            }
+
+            // Update tokenInfo.GeneratedAt to be a proper number
+            tokenInfo.GeneratedAt = generatedAtTimestamp;
           } else {
-            tokenStatus = 'expired';
+            // Invalid timestamp - treat as expired and regenerate
+            // Debug invalid timestamp (remove in production)
+            // console.log('Invalid timestamp detected:', {
+            //   generatedAtTimestamp,
+            //   isNaN: isNaN(generatedAtTimestamp),
+            //   isPositive: generatedAtTimestamp > 0,
+            //   isFuture: generatedAtTimestamp > (currentTime + maxFuture),
+            //   isTooOld: (currentTime - generatedAtTimestamp) >= maxAge
+            // });
+            tokenStatus = 'invalid-timestamp';
+            tokenInfo.GeneratedAt = undefined;
           }
         }
       } catch (error) {

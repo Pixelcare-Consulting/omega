@@ -331,6 +331,31 @@ export default function SettingsConfig() {
     }
   };
 
+  const resetSAPToken = async () => {
+    try {
+      const baseUrl = getBaseUrl();
+      const response = await fetch(`${baseUrl}/api/integrations/sap-b1/reset-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('SAP token reset and regenerated successfully');
+        // Refresh status after successful token reset
+        fetchSapStatus();
+      } else {
+        throw new Error(data.error || 'Failed to reset SAP token');
+      }
+    } catch (error) {
+      console.error('Failed to reset SAP token:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to reset SAP token');
+    }
+  };
+
   const fetchSapStatus = async () => {
     try {
       const baseUrl = getBaseUrl();
@@ -592,7 +617,22 @@ export default function SettingsConfig() {
                                     </div>
                                     <div>
                                       <span className="text-muted-foreground">Generated:</span>
-                                      <p>{sapStatus.tokenInfo.generatedAt ? new Date(sapStatus.tokenInfo.generatedAt).toLocaleString() : 'Unknown'}</p>
+                                      <p>{sapStatus.tokenInfo.generatedAt ?
+                                        (() => {
+                                          const date = new Date(sapStatus.tokenInfo.generatedAt);
+                                          // Check if the date is valid
+                                          if (isNaN(date.getTime())) {
+                                            return 'Invalid Date';
+                                          }
+                                          // Check if the date is in a reasonable range (not in the future, not too old)
+                                          const now = Date.now();
+                                          const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+                                          if (date.getTime() > now || (now - date.getTime()) > maxAge) {
+                                            return 'Invalid Date';
+                                          }
+                                          return date.toLocaleString();
+                                        })()
+                                        : 'Unknown'}</p>
                                     </div>
                                     <div>
                                       <span className="text-muted-foreground">Token Status:</span>
@@ -621,7 +661,24 @@ export default function SettingsConfig() {
                           <div>
                             <Label>Token Expiration:</Label>
                             <p className="text-sm text-muted-foreground">
-                              {timeRemaining !== null ? `${Math.floor(timeRemaining / 60000)}m ${Math.floor((timeRemaining % 60000) / 1000)}s` : sapStatus.status === 'disconnected' ? 'N/A' : 'Loading...'}
+                              {timeRemaining !== null ?
+                                timeRemaining > 0 ?
+                                  `${Math.floor(timeRemaining / 60000)}m ${Math.floor((timeRemaining % 60000) / 1000)}s`
+                                  : 'Expired'
+                                : sapStatus.expirationTime ?
+                                  (() => {
+                                    const expDate = new Date(sapStatus.expirationTime);
+                                    if (isNaN(expDate.getTime())) {
+                                      return 'Invalid expiration time';
+                                    }
+                                    const now = Date.now();
+                                    const remaining = sapStatus.expirationTime - now;
+                                    if (remaining <= 0) {
+                                      return 'Expired';
+                                    }
+                                    return `${Math.floor(remaining / 60000)}m ${Math.floor((remaining % 60000) / 1000)}s`;
+                                  })()
+                                  : sapStatus.status === 'disconnected' ? 'N/A' : 'Loading...'}
                             </p>
                           </div>
                         </div>
@@ -644,6 +701,15 @@ export default function SettingsConfig() {
                           >
                             <CheckCircle className="h-4 w-4" />
                             Refresh Token
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={resetSAPToken}
+                            disabled={!showCredentials}
+                            className="gap-2"
+                          >
+                            <AlertCircle className="h-4 w-4" />
+                            Reset Token
                           </Button>
                         </div>
                       </div>
