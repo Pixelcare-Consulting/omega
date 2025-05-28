@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import ini from 'ini';
+import https from 'https';
+import axios from 'axios';
 
 const TOKEN_FILE_PATH = './SAP-Service-Layer-Authorization-Token.ini';
 
@@ -81,20 +83,30 @@ export async function GET(request: Request) {
     // Test actual connection to SAP Service Layer
     let connectionStatus = 'disconnected';
     try {
-      const loginUrl = `${sapBaseUrl}/Login`;
-      const response = await fetch(loginUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          CompanyDB: sapCompanyDB,
-          UserName: sapUsername,
-          Password: sapPassword
-        })
+      // Clean the base URL and construct the login endpoint
+      const baseUrl = sapBaseUrl.replace(/\/+$/, ''); // Remove trailing slashes
+      const loginUrl = `${baseUrl}/b1s/v1/Login`;
+
+      // Create HTTPS agent that bypasses SSL certificate validation
+      const agent = new https.Agent({
+        rejectUnauthorized: false,
+        timeout: 30000, // 30 second timeout
       });
 
-      if (response.ok) {
+      const response = await axios.post(loginUrl, {
+        CompanyDB: sapCompanyDB,
+        UserName: sapUsername,
+        Password: sapPassword,
+      }, {
+        httpsAgent: agent,
+        timeout: 30000, // 30 second timeout
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+
+      if (response.status === 200) {
         connectionStatus = 'connected';
         // If we don't have a valid token but connection works, use current time + 30 min
         if (tokenStatus !== 'valid') {
