@@ -8,6 +8,7 @@ import { getUserByEmail } from './user'
 import { action } from '@/lib/safe-action'
 import { loginFormSchema } from '@/schema/auth'
 import { DEFAULT_LOGIN_REDIRECT } from '@/constant/route'
+import { getSapServiceLayerToken } from '@/lib/sap-auth';
 
 export async function getCurrentUser() {
   try {
@@ -78,6 +79,18 @@ export const loginUser = action.schema(loginFormSchema).action(async ({ parsedIn
           message: result.error || 'Authentication failed',
           action: 'SIGNIN_USER'
         }
+      }
+
+      // Authenticate with SAP Service Layer after successful application login
+      try {
+        const sapToken = await getSapServiceLayerToken();
+        console.log('Successfully obtained SAP Service Layer token:', sapToken ? 'Token obtained' : 'No token obtained');
+      } catch (sapAuthError) {
+        console.error('Error during SAP Service Layer authentication:', sapAuthError);
+        // Decide how to handle SAP authentication failure:
+        // - Option 1: Allow application login but log the SAP error (current approach)
+        // - Option 2: Prevent application login if SAP authentication fails
+        // For now, we'll allow application login and just log the error.
       }
 
       return {
