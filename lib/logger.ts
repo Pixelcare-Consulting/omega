@@ -1,5 +1,11 @@
+'use server'
+
 import fs from 'fs';
 import path from 'path';
+
+// This file is intended to run only on the server (Node.js environment).
+// Ensure that any components or API routes importing this file are also marked as server-only
+// or are configured to run in a Node.js environment to avoid issues with the edge runtime.
 
 const LOGS_DIR = path.join(process.cwd(), 'logs');
 

@@ -5,10 +5,10 @@ import ini from 'ini';
 import { authenticateSAPServiceLayer } from './sap-service-layer'; // Import the authentication function
 import { sapLogger, authLogger } from './logger'; // Import the loggers
 
-// Define the path for the token file
-// This code is intended to run only on the server (Node.js environment).
+// This file is intended to run only on the server (Node.js environment).
 // Ensure that any components or API routes importing this file are also marked as server-only
 // or are configured to run in a Node.js environment to avoid issues with the edge runtime.
+// Define the path for the token file
 const TOKEN_FILE_PATH = './SAP-Service-Layer-Authorization-Token.ini';
 
 interface SapTokenConfig {
@@ -98,10 +98,10 @@ export async function getSapServiceLayerToken(): Promise<SapAuthCookies> {
 async function generateNewSapServiceLayerToken(): Promise<SapAuthCookies> {
   // TODO: Replace with actual credentials from a secure source (e.g., environment variables, secrets management)
   const credentials = {
-    BaseURL: 'YOUR_SAP_SERVICE_LAYER_BASE_URL', // e.g., 'https://your-sap-server:50000'
-    CompanyDB: 'YOUR_COMPANY_DB',
-    UserName: 'YOUR_USERNAME',
-    Password: 'YOUR_PASSWORD',
+    BaseURL: process.env.SAP_BASE_URL || '', 
+    CompanyDB: process.env.SAP_COMPANY_DB || '',
+    UserName: process.env.SAP_USERNAME || '',
+    Password: process.env.SAP_PASSWORD || '',
   };
 
   try {
