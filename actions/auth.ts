@@ -15,12 +15,14 @@ export async function getCurrentUser() {
     const session = await auth()
 
     if (!session?.user) {
-      console.log('No active session or user data found')
       return null
     }
 
-    // Log successful session retrieval
-    console.log(`Session retrieved for user: ${session.user.email}`)
+    // Only log session retrieval in debug mode to reduce noise
+    if (process.env.NODE_ENV === 'development' && process.env.LOG_LEVEL === 'debug') {
+      console.log(`Session retrieved for user: ${session.user.email}`)
+    }
+
     return session.user
   } catch (error) {
     console.error('Error retrieving current user session:', error)
@@ -82,22 +84,31 @@ export const loginUser = action.schema(loginFormSchema).action(async ({ parsedIn
       }
 
       // Authenticate with SAP Service Layer after successful application login
+      let sapConnectionStatus = 'unknown';
+      let sapErrorMessage = '';
+
       try {
         const sapToken = await getSapServiceLayerToken();
-        console.log('Successfully obtained SAP Service Layer token:', sapToken ? 'Token obtained' : 'No token obtained');
+        sapConnectionStatus = 'connected';
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Successfully obtained SAP Service Layer token:', sapToken ? 'Token obtained' : 'No token obtained');
+        }
       } catch (sapAuthError) {
+        sapConnectionStatus = 'failed';
+        sapErrorMessage = sapAuthError instanceof Error ? sapAuthError.message : 'Unknown SAP connection error';
         console.error('Error during SAP Service Layer authentication:', sapAuthError);
-        // Decide how to handle SAP authentication failure:
-        // - Option 1: Allow application login but log the SAP error (current approach)
-        // - Option 2: Prevent application login if SAP authentication fails
-        // For now, we'll allow application login and just log the error.
+        // Allow application login but inform user about SAP connection issue
       }
 
       return {
         success: true,
         message: 'Login successful!',
         redirectUrl: callbackUrl || DEFAULT_LOGIN_REDIRECT,
-        action: 'SIGNIN_USER'
+        action: 'SIGNIN_USER',
+        sapConnection: {
+          status: sapConnectionStatus,
+          error: sapErrorMessage
+        }
       }
     } catch (signInError) {
       if (signInError instanceof AuthError) {

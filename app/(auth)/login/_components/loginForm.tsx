@@ -30,15 +30,16 @@ const LOADING_TIPS = [
 
 type AuthStatusModalProps = {
   isOpen: boolean
-  status: 'loading' | 'success' | 'error'
+  status: 'loading' | 'success' | 'error' | 'warning'
   message: string
   onClose: () => void
   redirectUrl?: string
+  sapError?: string
 }
 
 //* Auth Status Modal Component
-const AuthStatusModal = ({ isOpen, status, message, onClose, redirectUrl }: AuthStatusModalProps) => {
-  const [countdown, setCountdown] = useState(5)
+const AuthStatusModal = ({ isOpen, status, message, onClose, redirectUrl, sapError }: AuthStatusModalProps) => {
+  const [countdown, setCountdown] = useState(20)
   const [currentTip, setCurrentTip] = useState(0)
   const [progress, setProgress] = useState(0)
 
@@ -60,7 +61,7 @@ const AuthStatusModal = ({ isOpen, status, message, onClose, redirectUrl }: Auth
       tipTimer = setInterval(() => {
         setCurrentTip((prev) => (prev + 1) % LOADING_TIPS.length)
       }, 2000)
-    } else if (status === 'success' && isOpen) {
+    } else if ((status === 'success' || status === 'warning') && isOpen) {
       setProgress(100)
       timer = setInterval(() => {
         setCountdown((prev) => {
@@ -95,8 +96,11 @@ const AuthStatusModal = ({ isOpen, status, message, onClose, redirectUrl }: Auth
         onInteractOutside={status === 'loading' ? (e) => e.preventDefault() : undefined}
       >
         <DialogHeader className='pb-2'>
-          <DialogTitle className={`text-center text-xl ${status === 'success' ? 'text-primary' : ''}`}>
-            {status === 'loading' ? 'Authenticating...' : status === 'success' ? 'Welcome Back!' : 'Authentication Error'}
+          <DialogTitle className={`text-center text-xl ${status === 'success' ? 'text-primary' : status === 'warning' ? 'text-amber-600' : ''}`}>
+            {status === 'loading' ? 'Authenticating...' :
+             status === 'success' ? 'Welcome Back!' :
+             status === 'warning' ? 'Login Successful' :
+             'Authentication Error'}
           </DialogTitle>
           <DialogDescription className='pt-1 text-center'>{message}</DialogDescription>
         </DialogHeader>
@@ -156,6 +160,64 @@ const AuthStatusModal = ({ isOpen, status, message, onClose, redirectUrl }: Auth
             </div>
           )}
 
+          {status === 'warning' && (
+            <div className='flex flex-col items-center gap-6'>
+              {/* Warning animation */}
+              <div className='relative flex h-24 w-24 items-center justify-center'>
+                <div className='absolute inset-0 rounded-full border-4 border-amber-100 dark:border-amber-900/30'></div>
+                <div className='rounded-full bg-amber-50 p-4 animate-in zoom-in-50 dark:bg-amber-900/30'>
+                  <Icons.triangleAlert className='size-10 text-amber-500' />
+                </div>
+              </div>
+
+              {/* SAP Connection Warning */}
+              {sapError && (
+                <div className='w-full rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20'>
+                  <div className='flex items-start gap-3'>
+                    <Icons.triangleAlert className='mt-0.5 size-4 text-amber-500' />
+                    <div className='flex-1'>
+                      <h4 className='text-sm font-medium text-amber-800 dark:text-amber-200'>
+                        SAP Service Layer Connection Issue
+                      </h4>
+                      <p className='mt-1 text-sm text-amber-700 dark:text-amber-300'>
+                        {sapError}
+                      </p>
+                      <p className='mt-2 text-xs text-amber-600 dark:text-amber-400'>
+                        You can still access the application, but SAP-related features may be limited.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Progress bar */}
+              <div className='w-full space-y-2'>
+                <div className='flex items-center justify-between text-sm'>
+                  <span className='text-amber-600 dark:text-amber-400'>Redirecting in {countdown}s</span>
+                  <span className='text-amber-600 dark:text-amber-400'>100%</span>
+                </div>
+                <div className='h-2 w-full overflow-hidden rounded-full bg-amber-100 dark:bg-amber-900/30'>
+                  <div className='h-full bg-amber-500 transition-all duration-300 ease-out' style={{ width: '100%' }}></div>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className='flex w-full gap-3'>
+                <Button className='flex-1' variant='outline' onClick={onClose}>
+                  Continue Anyway
+                </Button>
+                <Button
+                  className='flex-1'
+                  onClick={() => {
+                    if (redirectUrl) window.location.assign(redirectUrl)
+                  }}
+                >
+                  Go to Dashboard
+                </Button>
+              </div>
+            </div>
+          )}
+
           {status === 'error' && (
             <div className='flex flex-col items-center gap-6'>
               {/* Error animation */}
@@ -188,6 +250,10 @@ interface LoginResponse {
   code?: number
   action?: string
   redirectUrl?: string
+  sapConnection?: {
+    status: 'connected' | 'failed' | 'unknown'
+    error?: string
+  }
 }
 
 interface ActionResponse {
@@ -201,12 +267,14 @@ const SigninForm = () => {
   const [showTotpInput, setShowTotpInput] = useState(false)
   const [modalState, setModalState] = useState<{
     isOpen: boolean
-    status: 'loading' | 'success' | 'error'
+    status: 'loading' | 'success' | 'error' | 'warning'
     message: string
+    sapError?: string
   }>({
     isOpen: false,
     status: 'loading',
-    message: ''
+    message: '',
+    sapError: undefined
   })
 
   const searchParams = useSearchParams()
@@ -254,12 +322,23 @@ const SigninForm = () => {
 
       //* Check for success
       if (result?.success) {
-        //* Show success modal
-        setModalState({
-          isOpen: true,
-          status: 'success',
-          message: `Welcome back, ${formValues.email.split('@')[0]}!`
-        })
+        //* Check SAP connection status
+        if (result.sapConnection?.status === 'failed') {
+          //* Show warning modal for SAP connection failure
+          setModalState({
+            isOpen: true,
+            status: 'warning',
+            message: `Welcome back, ${formValues.email.split('@')[0]}! However, there's an issue with the SAP connection.`,
+            sapError: result.sapConnection.error
+          })
+        } else {
+          //* Show success modal
+          setModalState({
+            isOpen: true,
+            status: 'success',
+            message: `Welcome back, ${formValues.email.split('@')[0]}!`
+          })
+        }
 
         setSuccess('Successfully logged in!')
         form.reset()
@@ -417,6 +496,7 @@ const SigninForm = () => {
         message={modalState.message}
         onClose={handleModalClose}
         redirectUrl={callbackUrl}
+        sapError={modalState.sapError}
       />
     </div>
   )

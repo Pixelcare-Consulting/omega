@@ -23,16 +23,32 @@ interface SAPSession {
 
 export async function authenticateSAPServiceLayer(credentials: SAPCredentials): Promise<SAPSession> {
   try {
-    const agent = new https.Agent({
-      rejectUnauthorized: false,
+    // Clean the base URL and construct the login endpoint
+    const baseUrl = credentials.BaseURL.replace(/\/+$/, ''); // Remove trailing slashes
+    const loginUrl = `${baseUrl}/b1s/v1/Login`;
+
+    sapLogger.info('Attempting SAP Service Layer authentication', {
+      url: loginUrl,
+      companyDB: credentials.CompanyDB,
+      username: credentials.UserName
     });
 
-    const response = await axios.post(`${credentials.BaseURL}/b1s/v1/Login`, {
+    const agent = new https.Agent({
+      rejectUnauthorized: false,
+      timeout: 30000, // 30 second timeout
+    });
+
+    const response = await axios.post(loginUrl, {
       CompanyDB: credentials.CompanyDB,
       UserName: credentials.UserName,
       Password: credentials.Password,
     }, {
       httpsAgent: agent,
+      timeout: 30000, // 30 second timeout
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
     });
 
     const setCookieHeader = response.headers['set-cookie'];
@@ -49,13 +65,32 @@ export async function authenticateSAPServiceLayer(credentials: SAPCredentials): 
       });
     }
 
+    if (!b1sessionCookie || !routeidCookie) {
+      throw new Error('Failed to extract session cookies from SAP response');
+    }
+
+    sapLogger.info('SAP Service Layer authentication successful', {
+      hasB1Session: !!b1sessionCookie,
+      hasRouteId: !!routeidCookie
+    });
+
     return {
       b1session: b1sessionCookie,
       routeid: routeidCookie,
     };
   } catch (error: any) {
-    sapLogger.error(`SAP Service Layer authentication failed: ${error.message}`);
-    throw new Error(`SAP Service Layer authentication failed: ${error.message}`);
+    const errorMessage = error.code === 'ETIMEDOUT'
+      ? `Connection timeout to SAP server (${credentials.BaseURL}). Please check if the server is accessible.`
+      : `SAP Service Layer authentication failed: ${error.message}`;
+
+    sapLogger.error(errorMessage, {
+      errorCode: error.code,
+      baseUrl: credentials.BaseURL,
+      companyDB: credentials.CompanyDB,
+      username: credentials.UserName
+    });
+
+    throw new Error(errorMessage);
   }
 }
 

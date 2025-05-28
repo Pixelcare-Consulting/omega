@@ -81,7 +81,10 @@ export async function getSapServiceLayerToken(): Promise<SapAuthCookies> {
   try {
     const newFileContent = ini.stringify(config);
     fs.writeFileSync(TOKEN_FILE_PATH, newFileContent);
-    console.log('New SAP Service Layer cookies saved to file.');
+    sapLogger.info('New SAP Service Layer cookies saved to file', {
+      tokenFile: TOKEN_FILE_PATH,
+      generatedAt: config.GeneratedAt
+    });
   } catch (error) {
     sapLogger.error(`Error writing SAP Service Layer token file: ${error}`);
     // Depending on the error, you might want to throw or handle differently
@@ -98,7 +101,7 @@ export async function getSapServiceLayerToken(): Promise<SapAuthCookies> {
 async function generateNewSapServiceLayerToken(): Promise<SapAuthCookies> {
   // TODO: Replace with actual credentials from a secure source (e.g., environment variables, secrets management)
   const credentials = {
-    BaseURL: process.env.SAP_BASE_URL || '', 
+    BaseURL: process.env.SAP_BASE_URL || '',
     CompanyDB: process.env.SAP_COMPANY_DB || '',
     UserName: process.env.SAP_USERNAME || '',
     Password: process.env.SAP_PASSWORD || '',

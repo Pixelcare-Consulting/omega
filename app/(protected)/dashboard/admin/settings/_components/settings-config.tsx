@@ -102,7 +102,20 @@ export default function SettingsConfig() {
 
   const [sapStatus, setSapStatus] = useState<{
     status: 'unknown' | 'connected' | 'disconnected';
-    expirationTime: number | null; // Change to number for timestamp
+    expirationTime: number | null;
+    tokenStatus?: string;
+    tokenInfo?: {
+      hasB1Session: boolean;
+      hasRouteId: boolean;
+      generatedAt?: number;
+      b1sessionPreview?: string;
+      routeidPreview?: string;
+    } | null;
+    credentials?: {
+      baseUrl: string;
+      companyDB: string;
+      username: string;
+    };
   }>({ status: 'unknown', expirationTime: null });
 
   const [isApiConfigDialogOpen, setIsApiConfigDialogOpen] = useState(false);
@@ -169,20 +182,6 @@ export default function SettingsConfig() {
   // Fetch SAP status when the API config dialog is opened
   useEffect(() => {
     if (isApiConfigDialogOpen) {
-      const fetchSapStatus = async () => {
-        try {
-          const baseUrl = getBaseUrl();
-          const response = await fetch(`${baseUrl}/api/integrations/sap-b1/status`);
-          if (!response.ok) {
-            throw new Error('Failed to fetch SAP status');
-          }
-          const data = await response.json();
-          setSapStatus(data);
-        } catch (error) {
-          console.error('Failed to fetch SAP status:', error);
-          setSapStatus({ status: 'disconnected', expirationTime: null });
-        }
-      };
       fetchSapStatus();
     }
   }, [isApiConfigDialogOpen]);
@@ -274,29 +273,76 @@ export default function SettingsConfig() {
   const testSAPConnection = async () => {
     try {
       const baseUrl = getBaseUrl();
-      const response = await fetch(`${baseUrl}/api/integrations/sap-b1/test`, {
+      const response = await fetch(`${baseUrl}/api/integrations/sap-b1/test-connection`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          url: apiConfig.sapB1.serviceLayerUrl,
-          companyDB: apiConfig.sapB1.companyDB,
-          username: apiConfig.sapB1.username,
-          password: apiConfig.sapB1.password
-        })
+        }
       });
 
       const data = await response.json();
 
       if (data.success) {
         toast.success('Successfully connected to SAP B1 Service Layer');
+        // Refresh status after successful test
+        fetchSapStatus();
       } else {
-        throw new Error(data.error || 'Failed to connect to SAP B1');
+        // Show detailed error information
+        const errorDetails = data.details?.troubleshooting
+          ? `\n\nTroubleshooting: ${data.details.troubleshooting}`
+          : '';
+
+        toast.error(`Connection failed: ${data.error}${errorDetails}`);
+
+        // Log detailed error for debugging
+        console.error('SAP Connection Test Failed:', {
+          error: data.error,
+          details: data.details
+        });
       }
     } catch (error) {
       console.error('Failed to test SAP connection:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to connect to SAP B1');
+    }
+  };
+
+  const refreshSAPToken = async () => {
+    try {
+      const baseUrl = getBaseUrl();
+      const response = await fetch(`${baseUrl}/api/integrations/sap-b1/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('SAP token refreshed successfully');
+        // Refresh status after successful token generation
+        fetchSapStatus();
+      } else {
+        throw new Error(data.error || 'Failed to refresh SAP token');
+      }
+    } catch (error) {
+      console.error('Failed to refresh SAP token:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to refresh SAP token');
+    }
+  };
+
+  const fetchSapStatus = async () => {
+    try {
+      const baseUrl = getBaseUrl();
+      const response = await fetch(`${baseUrl}/api/integrations/sap-b1/status`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch SAP status');
+      }
+      const data = await response.json();
+      setSapStatus(data);
+    } catch (error) {
+      console.error('Failed to fetch SAP status:', error);
+      setSapStatus({ status: 'disconnected', expirationTime: null });
     }
   };
 
@@ -530,16 +576,33 @@ export default function SettingsConfig() {
                                   className="mt-1"
                                 />
                               </div>
-                              {/* <div>
-                                <Label htmlFor="password">Password:</Label>
-                                <Input
-                                  id="password"
-                                  type="password" // Mask the password
-                                  value={apiConfig.sapB1.password}
-                                  readOnly={!showCredentials}
-                                  className="mt-1"
-                                />
-                              </div> */}
+
+                              {/* Token Information */}
+                              {sapStatus.tokenInfo && (
+                                <div className="space-y-2 p-3 bg-muted rounded-lg">
+                                  <Label className="text-sm font-medium">Token Information:</Label>
+                                  <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div>
+                                      <span className="text-muted-foreground">B1 Session:</span>
+                                      <p className="font-mono">{sapStatus.tokenInfo.b1sessionPreview || 'Not available'}</p>
+                                    </div>
+                                    <div>
+                                      <span className="text-muted-foreground">Route ID:</span>
+                                      <p className="font-mono">{sapStatus.tokenInfo.routeidPreview || 'Not available'}</p>
+                                    </div>
+                                    <div>
+                                      <span className="text-muted-foreground">Generated:</span>
+                                      <p>{sapStatus.tokenInfo.generatedAt ? new Date(sapStatus.tokenInfo.generatedAt).toLocaleString() : 'Unknown'}</p>
+                                    </div>
+                                    <div>
+                                      <span className="text-muted-foreground">Token Status:</span>
+                                      <p className={`font-medium ${sapStatus.tokenStatus === 'valid' ? 'text-green-600' : sapStatus.tokenStatus === 'expired' ? 'text-red-600' : 'text-yellow-600'}`}>
+                                        {sapStatus.tokenStatus || 'Unknown'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -563,7 +626,7 @@ export default function SettingsConfig() {
                           </div>
                         </div>
                         <Separator />
-                        <div className="flex justify-center">
+                        <div className="flex justify-center gap-2">
                           <Button
                             variant="outline"
                             onClick={testSAPConnection}
@@ -572,6 +635,15 @@ export default function SettingsConfig() {
                           >
                             <Database className="h-4 w-4" />
                             Test Connection
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={refreshSAPToken}
+                            disabled={!showCredentials}
+                            className="gap-2"
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                            Refresh Token
                           </Button>
                         </div>
                       </div>

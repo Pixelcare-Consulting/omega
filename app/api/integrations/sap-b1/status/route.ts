@@ -1,4 +1,14 @@
 import { NextResponse } from 'next/server';
+import fs from 'fs';
+import ini from 'ini';
+
+const TOKEN_FILE_PATH = './SAP-Service-Layer-Authorization-Token.ini';
+
+interface SapTokenConfig {
+  b1session?: string;
+  routeid?: string;
+  GeneratedAt?: number;
+}
 
 export async function GET(request: Request) {
   try {
@@ -7,16 +17,69 @@ export async function GET(request: Request) {
     const sapCompanyDB = process.env.SAP_COMPANY_DB;
     const sapUsername = process.env.SAP_USERNAME;
     const sapPassword = process.env.SAP_PASSWORD;
+    const sapMockMode = process.env.SAP_MOCK_MODE === 'true';
 
     if (!sapBaseUrl || !sapCompanyDB || !sapUsername || !sapPassword) {
       return NextResponse.json({
         status: 'disconnected',
         expirationTime: null,
-        error: 'SAP credentials not configured'
+        error: 'SAP credentials not configured',
+        tokenInfo: null
       });
     }
 
-    // Test connection to SAP Service Layer
+    // If in mock mode, return simulated connected status
+    if (sapMockMode) {
+      return NextResponse.json({
+        status: 'connected',
+        expirationTime: Date.now() + 30 * 60 * 1000, // 30 minutes from now
+        tokenStatus: 'valid',
+        tokenInfo: {
+          hasB1Session: true,
+          hasRouteId: true,
+          generatedAt: Date.now() - 5 * 60 * 1000, // 5 minutes ago
+          b1sessionPreview: 'B1SESSION=mock-session-token-12345...',
+          routeidPreview: 'ROUTEID=mock-route-id-67890...'
+        },
+        credentials: {
+          baseUrl: sapBaseUrl,
+          companyDB: sapCompanyDB,
+          username: sapUsername
+        },
+        mockMode: true
+      });
+    }
+
+    // Check if token file exists and read token information
+    let tokenInfo: SapTokenConfig | null = null;
+    let tokenStatus = 'no-token';
+    let calculatedExpiration: number | null = null;
+
+    if (fs.existsSync(TOKEN_FILE_PATH)) {
+      try {
+        const fileContent = fs.readFileSync(TOKEN_FILE_PATH, 'utf-8');
+        tokenInfo = ini.parse(fileContent);
+
+        if (tokenInfo.GeneratedAt && tokenInfo.b1session && tokenInfo.routeid) {
+          // Calculate expiration (SAP tokens typically last 30 minutes)
+          const sessionTimeout = 30 * 60 * 1000; // 30 minutes in milliseconds
+          calculatedExpiration = tokenInfo.GeneratedAt + sessionTimeout;
+          const currentTime = Date.now();
+
+          if (currentTime < calculatedExpiration) {
+            tokenStatus = 'valid';
+          } else {
+            tokenStatus = 'expired';
+          }
+        }
+      } catch (error) {
+        console.error('Error reading token file:', error);
+        tokenStatus = 'error';
+      }
+    }
+
+    // Test actual connection to SAP Service Layer
+    let connectionStatus = 'disconnected';
     try {
       const loginUrl = `${sapBaseUrl}/Login`;
       const response = await fetch(loginUrl, {
@@ -32,34 +95,41 @@ export async function GET(request: Request) {
       });
 
       if (response.ok) {
-        // Connection successful
-        const sapStatus = {
-          status: 'connected',
-          expirationTime: Date.now() + 30 * 60 * 1000, // 30 minutes from now
-        };
-        return NextResponse.json(sapStatus);
-      } else {
-        // Connection failed
-        return NextResponse.json({
-          status: 'disconnected',
-          expirationTime: null,
-          error: `Connection failed: ${response.status}`
-        });
+        connectionStatus = 'connected';
+        // If we don't have a valid token but connection works, use current time + 30 min
+        if (tokenStatus !== 'valid') {
+          calculatedExpiration = Date.now() + 30 * 60 * 1000;
+        }
       }
     } catch (connectionError: any) {
-      return NextResponse.json({
-        status: 'disconnected',
-        expirationTime: null,
-        error: `Connection error: ${connectionError.message}`
-      });
+      console.error('Connection test failed:', connectionError);
     }
+
+    return NextResponse.json({
+      status: connectionStatus,
+      expirationTime: calculatedExpiration,
+      tokenStatus,
+      tokenInfo: tokenInfo ? {
+        hasB1Session: !!tokenInfo.b1session,
+        hasRouteId: !!tokenInfo.routeid,
+        generatedAt: tokenInfo.GeneratedAt,
+        b1sessionPreview: tokenInfo.b1session ? `${tokenInfo.b1session.substring(0, 20)}...` : null,
+        routeidPreview: tokenInfo.routeid ? `${tokenInfo.routeid.substring(0, 20)}...` : null
+      } : null,
+      credentials: {
+        baseUrl: sapBaseUrl,
+        companyDB: sapCompanyDB,
+        username: sapUsername
+      }
+    });
 
   } catch (error: any) {
     console.error('Error fetching SAP status:', error);
     return NextResponse.json({
       status: 'disconnected',
       expirationTime: null,
-      error: 'Error fetching status'
+      error: 'Error fetching status',
+      tokenInfo: null
     }, { status: 500 });
   }
 }
